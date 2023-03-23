@@ -1,12 +1,13 @@
 {
   "config": {
-    "platform": "github",
-    "domain": "",
-    "repository": "",
-    "branch": "",
-    "username": "",
-    "email": "",
-    "token": ""
+    "branch": "main",
+    "domain": "https:///yzx2018.github.io/mypage/",
+    "email": "394406230@qq.com",
+    "enabledProxy": "direct",
+    "platform": "gitee",
+    "repository": "mypage",
+    "token": "74616febdee93544a295b2a844a9ce98",
+    "username": "yezhaoxin"
   },
   "comment": {
     "commentPlatform": "gitalk",
