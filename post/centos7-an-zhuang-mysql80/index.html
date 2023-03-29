@@ -1,0 +1,202 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>centos7安装mysql8.0 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">centos7安装mysql8.0</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2018-12-06</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <p>https://dev.mysql.com/downloads/mysql/  下载rpm的tar包并解压<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/%E5%AE%89%E8%A3%85mysql8.0-1.jpg" alt="image.png" loading="lazy"><br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/%E5%AE%89%E8%A3%85mysql8.0-2.jpg" alt="image.png" loading="lazy"></p>
+<p>压解后将这几个文件上传到linux<br>
+mysql-community-common-8.0.16-2.el7.x86_64.rpm<br>
+mysql-community-libs-8.0.16-2.el7.x86_64.rpm<br>
+mysql-community-client-8.0.16-2.el7.x86_64.rpm<br>
+mysql-community-server-8.0.16-2.el7.x86_64.rpm<br>
+新建 /usr/mysql目录 使用winscp上传这四个安装包到linux服务器 /usr/mysql</p>
+<p>1、安装新版mysql之前，我们需要将系统自带的mariadb-lib卸载<br>
+命令：<br>
+查询 rpm -qa|grep mariadb<br>
+删除 rpm -e mariadb-libs-5.5.56-2.el7.x86_64 --nodeps<br>
+2、进入到/usr/mysql目录，安装rpm<br>
+cd /usr/mysql(之前创建上传mysql的目录)<br>
+rpm -ivh mysql-community-common-8.0.16-2.el7.x86_64.rpm<br>
+rpm -ivh mysql-community-libs-8.0.16-2.el7.x86_64.rpm<br>
+rpm -ivh mysql-community-client-8.0.16-2.el7.x86_64.rpm<br>
+rpm -ivh mysql-community-server-8.0.16-2.el7.x86_64.rpm<br>
+安装到server会出现perl错误<br>
+yum install perl<br>
+再执行 rpm -ivh mysql-community-server-8.0.16-2.el7.x86_64.rpm<br>
+安装成功</p>
+<p>启动mysql<br>
+systemctl start mysqld<br>
+设置开机启动<br>
+[root@localhost ~]# systemctl enable mysqld<br>
+[root@localhost ~]# systemctl daemon-reload</p>
+<p>mysql安装完成之后，在/var/log/mysqld.log文件中给root生成了一个临时的默认密码。<br>
+[root@localhost ~]# vi /var/log/mysqld.log<br>
+查找到root@localhost: q2jvten?biYR      (不要最前面的空格)<br>
+进入到mysql服务<br>
+mysql -u root -p<br>
+q2jvten?biYR</p>
+<p>进入后修改mysql密码 (备注 mysql5.7之后默认密码策略要求密码必须是大小写字母数字特殊字母的组合，至少8位)<br>
+进入mysql命令行；<br>
+mysql&gt; ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'GZyn@5180';<br>
+修改密码为 GZyn@5180</p>
+<p>注意：下面设置允许远程登录的两个版本操作不同。<br>
+设置允许远程登录(mysql5.7的方法)</p>
+<h2 id="grant-all-privileges-on-to-root-identified-by-gzyn5180-with-grant-option">GRANT ALL PRIVILEGES ON <em>.</em> TO 'root'@'%' IDENTIFIED BY 'GZyn@5180' WITH GRANT OPTION;</h2>
+<p>设置允许远程登录(mysql8的方法)<br>
+mysql&gt; use mysql;<br>
+2.查询host<br>
+mysql&gt; select user,host from user;<br>
+3.创建host<br>
+如果没有”%”这个host值,就执行下面这两句:<br>
+mysql&gt; update user set host='%' where user='root';<br>
+mysql&gt; flush privileges;</p>
+<p>开放3306端口<br>
+firewall-cmd --zone=public --add-port=3306/tcp --permanent<br>
+firewall-cmd --reload</p>
+<p>配置默认编码为utf8<br>
+修改/etc/my.cnf配置文件，在[mysqld]下添加编码配置，如下所示：<br>
+[mysqld]<br>
+character_set_server=utf8<br>
+init_connect='SET NAMES utf8'</p>
+<p>重启mysql服务<br>
+systemctl restart mysqld</p>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/tong-bu-io-he-yi-bu-iozu-sai-io-yu-fei-zu-sai-io-de-li-jie/">
+              <h3 class="post-title">
+                下一篇：同步IO和异步IO、阻塞IO与非阻塞IO的理解
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

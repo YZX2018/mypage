@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>linux安装redis | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">linux安装redis</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2018-10-06</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <p>1、在linux的/usr目录创建redis文件夹<br>
+2、上传redis-4.0.9.tar.gz到redis文件夹<br>
+3、进入到redis目录解压 tar.gz    命令 tar -zxvf redis-4.0.9.tar.gz<br>
+4、解决完后，有redis-4.0.9的目录 进入目录 命令 cd redis-4.0.9<br>
+5、编译。命令 make<br>
+（注意，编译需要C语言编译器gcc的支持，如果没有，需要先安装gcc。可以使用rpm -q gcc查看gcc是否安装）<br>
+（利用yum在线安装gcc的命令    yum -y install gcc )<br>
+（如果编译出错，请使用make clean清除临时文件。之后，找到出错的原因，解决问题后再来重新安装。 ）<br>
+6、编译完后，有src目录，进入到src目录 命令 cd src<br>
+7、执行安装  命令 make install</p>
+<p>到此就安装完成。但是，由于安装redis的时候，我们没有选择安装路径，故是默认位置安装当前目录 (/usr/redis/redis-4.0.9)。在此，我们可以将可执行文件和配置文件移动到习惯的目录<br>
+在/usr/local目录创建redis/bin和redis/ect目录<br>
+命令<br>
+cd /usr/local<br>
+mkdir -p /usr/local/redis/bin<br>
+mkdir -p /usr/local/redis/etc<br>
+再进入安装的redis目录。把执行文件和配置文件复制到刚才创建的目录<br>
+cd /usr/redis/redis-4.0.9<br>
+复制配置文件到/usr/local/redis/etc目录<br>
+cp ./redis.conf /usr/local/redis/etc<br>
+进入src目录，复制执行文件到/usr/local/redis/bin目录<br>
+cd src<br>
+cp mkreleasehdr.sh redis-benchmark redis-check-aof redis-cli redis-server redis-sentinel /usr/local/redis/bin</p>
+<p>启动redis，默认是前台启动，启动不能作其他操作，需要设置为后台启动<br>
+进入到/usr/local/redis/etc目录 修改 redis.conf文件<br>
+命令<br>
+cd /usr/local/redis/etc<br>
+vi redis.conf<br>
+找到daemonize no，改成yes(开启后台启动)       /daemonize 回车定位  N向上 n向下<br>
+找到requirepass 123456  修改Redis的连接密码为123456<br>
+bind 127.0.0.1注释掉  改成    # bind 127.0.0.1     允许外网访问<br>
+:wq保存</p>
+<p>启动redis 命令<br>
+cd /usr/local/redis/bin<br>
+./redis-server /usr/local/redis/etc/redis.conf          加上redis.conf文件启动，作用：比如设置了密码</p>
+<p>linux进行redis客户端 设置了密码  使用redis密码连接  不然操作会报(error) NOAUTH Authentication required<br>
+./redis-cli -h 127.0.0.1 -p 6379 -a &quot;123456&quot;</p>
+<p>远程连接需要进入到/usr/local/redis/etc目录 修改 redis.conf文件<br>
+1、把配置文件的bind 127.0.0.1注释掉  改成    # bind 127.0.0.1<br>
+2、设置密码  修改密码 # requirepass foobared  修改为requirepass 123456<br>
+3、开防火墙 开一个6379端口权限  或者关闭防火墙<br>
+firewall-cmd --zone=public --add-port=6379/tcp --permanent</p>
+<p>firewall-cmd --reload</p>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/fen-bu-shi-shi-wu/">
+              <h3 class="post-title">
+                下一篇：分布式事务
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

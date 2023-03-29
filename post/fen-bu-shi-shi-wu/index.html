@@ -1,0 +1,224 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>分布式事务 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">分布式事务</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2018-09-28</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <p>CAP：<br>
+C:一致性、A:可用性、P：分区容错性(出现网络延迟)</p>
+<p>BASE<br>
+基本可用(搜索1s变成2s、降级页面(当前访问量过多))<br>
+软状态 (状态机) 中间状态 如支付时的交易处理中状态<br>
+数据最终一致性 (基于MQ)</p>
+<p>高可用高设计<br>
+1.避免单点故障<br>
+a)负载均衡技术<br>
+b)热备<br>
+c)多机房(同城灾备、异地灾备)<br>
+2.应用的高可用性<br>
+a)故障监控(系统监控(cpu、内存))、链路监控、日志监控   的自动预警<br>
+b)应用的容错计设、服务降级、限流<br>
+c)数据量(数据分片、读写分离)</p>
+<hr>
+<p>分布式事务：在微服务中，一个服务调用另一个服务的接口操作数据库。<br>
+比如支付服务在支付后调用订单服务接口修改订单表的支付状态。<br>
+正常情况下，代码出现了异常，支付服务只能回滚自己的数据库。不能回滚订单服务的数据库</p>
+<p>分布式事务解决方案：<br>
+2PC(两段提交协议)、3PC(三段提交协议)、TCC(阿里写的框架)、MQ（补偿机制、重试），<br>
+其他补偿方式（回调） 如支付流程、<br>
+jta(java操作xa(分布式事务协调)接口)+Automatic(只适用于传统项目的多数据库)         底层采用2PC<br>
+CPA理论和base理论 柔性事务和刚性事务<br>
+LCN框架</p>
+<p>#分布式理论<br>
+CPA理论：<br>
+1.数据一致性、<br>
+2.服务可用性(所有读写请求在一定时间内得到响应，可终止、不会一直等待)、<br>
+3.分区容错(一个服务挂了不会影响到整体服务  高可用)</p>
+<p>Base理论：<br>
+1.基本可用<br>
+2.软状态<br>
+3.最终一致性</p>
+<p>BASE理论是对CAP中一致性和可用性权衡的结果，其来源于对大规模互联网系统分布式实践的总结，是基于CAP定理逐步演化而来的。BASE理论的核心思想是：即使无法做到强一致性，但每个应用都可以根据自身业务特点，采用适当的方式来使系统达到最终一致性。</p>
+<p>柔性事务和刚性事务<br>
+柔性事务满足BASE理论（基本可用，最终一致）<br>
+刚性事务满足ACID理论</p>
+<p>#2PC两段提交协议<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1%E4%B9%8BMQ%E5%8F%AF%E9%9D%A0%E6%B6%88%E6%81%AF-1.jpg" alt="image.png" loading="lazy"><br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1%E4%B9%8BMQ%E5%8F%AF%E9%9D%A0%E6%B6%88%E6%81%AF-2.jpg" alt="image.png" loading="lazy"></p>
+<p>全局事务：将多个事物进行统一管理</p>
+<p>第一次提交：协调者给每个参与者发一个预备通知，支付数据库和订单数据库回复给协调者是否可以提交事务<br>
+(作用：确认业务逻辑执行没有任何异常)</p>
+<p>第二次提交：协调者给每个参数与发一个通知 ，进行commit</p>
+<p>3PC与两阶段提交不同的是，三阶段提交有两个改动点。<br>
+1、引入超时机制。同时在协调者和参与者中都引入超时机制。</p>
+<p>2、在第一阶段和第二阶段中插入一个准备阶段。保证了在最后提交阶段之前各参与节点的状态是一致的。</p>
+<p>#MQ解决分布式事务</p>
+<p>使用MQ消息中间件 异步通知 ，点对点 解决高并发<br>
+MQ最终能够实现数据一致性 重试机制。补偿机制   要注意重复消费的幂等性问题(使用全局id+日志记录)</p>
+<p>MQ解决分布式事务：  底层base理论，柔性事务(基本可用，最终一致性)</p>
+<p>支付服务(生产者)状态支付状态通过MQ存到队列中，然后订单服务(消费者)进行对订单的修改。<br>
+但这样会出现延迟。但没有太大影响。基本上很快</p>
+<blockquote>
+<p>使用MQ可靠消息能够解决分布式事务的**最终一致性，**但不是实时一致(强一致性)。所以使用时要注意应用场景。</p>
+<p>MQ可靠消息：</p>
+<p>1.预发消息：MQ发送消息之前把消息的信息先存到数据库中留底，设置一个字段状态为待确认。(作用：能够知道这条消息是否发送成功，可进行人工补偿)</p>
+<p>2.进行业务操作</p>
+<p>3.向MQ发送消息，发送成功后把预发消息的状态改为发送中(表示成功发送)，如果失败就不需要修改</p>
+<p>应用场景：充值业务  订单-&gt;账务</p>
+<p>充值成功后</p>
+<p>第一步，将消息的信息先存到数据库中留底，设置一个字段状态为待确认(预发消息)</p>
+<p>第二步，修改充值的订单状态为充值功能</p>
+<p>第三步，发送MQ消息到账务系统，通知账务系统记录订单的账务明细</p>
+<p>特殊MQ可靠消息保证事务的场景：用户短时间多笔消费  订单-&gt;账户扣款</p>
+<p>如果消费时，先修改订单状态，再扣款。有10笔订单的消费状态都修成了成功，但是账户的余额不够钱扣除10笔订单。这样就会出问题了</p>
+<p>解决的方案：用户消费时，先扣款再修改订单</p>
+<p>不能使用MQ可靠消息保证事务的场景：交易完成后既要 <strong>扣款</strong> 也要 <strong>减库存</strong>。这种场场景要使用强一致性事务</p>
+</blockquote>
+<p>#LCN分布式事务框架v3.0   https://www.txlcn.org</p>
+<p>LCN:不生产事务，只是事务的协调者   LCN 核心采用3PC+TCC补偿机制<br>
+原理：发起方(如支付服务)需要调用其他服务接口(如订单服务)的时候，会在tx-manager创建一个事务分组，重写feign接口，在Http请求头上面把分组id传给参与方(订单服务)，参与方在Http请求头上收到分组id的时候，执行完不会提交事务，要等发起方代码执行完后，通知给tx-manager是提交还是回滚，然后tx-manager通知给参与方做事务处理</p>
+<p>核心步骤<br>
+创建事务组<br>
+是指在事务发起方开始执行业务代码之前先调用TxManager创建事务组对象，然后拿到事务标示GroupId的过程。<br>
+添加事务组<br>
+添加事务组是指参与方在执行完业务方法以后，将该模块的事务信息添加通知给TxManager的操作。<br>
+关闭事务组<br>
+是指在发起方执行完业务代码以后，将发起方执行结果状态通知给TxManager的动作。当执行完关闭事务组的方法以后，TxManager将根据事务组信息来通知相应的参与模块提交或回滚事务。<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1%E4%B9%8BMQ%E5%8F%AF%E9%9D%A0%E6%B6%88%E6%81%AF-3.jpg" alt="image.png" loading="lazy"></p>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/bing-fa-bao-zhong-de-suo/">
+              <h3 class="post-title">
+                下一篇：并发包中的锁
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

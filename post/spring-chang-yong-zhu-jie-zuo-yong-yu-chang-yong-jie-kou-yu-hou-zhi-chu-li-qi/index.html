@@ -1,0 +1,649 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>spring常用注解作用与常用接口与后置处理器 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">spring常用注解作用与常用接口与后置处理器</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2019-07-12</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <p><strong>从spring2.5之后，spring注解驱动开发慢慢取代了Spring的xml配置文件的作用，而且目前流行的SpringBoot开发也是基于spring注解驱动做扩展的，所以想要理解好SpringBoot，就必须掌握一些spring的注解驱动。</strong></p>
+<blockquote>
+<p>@Configuration+@Bean<br>
+用于创建bean并注册到spring的IOC容器中<br>
+如果我们想将Person初始化并加载到IOC容器中</p>
+</blockquote>
+<pre><code class="language-java">package com.example.demo;
+public class Person {
+    private String name;
+    private int age;
+}
+</code></pre>
+<p>以前xml的做法是</p>
+<pre><code class="language-java">&lt;bean id=&quot;person&quot; class=&quot;com.example.demo.Person&quot;&gt;
+   &lt;property name=&quot;name&quot; value=&quot;小小&quot;&gt;
+   &lt;property name=&quot;age&quot; value=&quot;23&quot;&gt;
+&lt;bean&gt;
+</code></pre>
+<p>现在使用spring注解的做法是</p>
+<pre><code class="language-java">// 等同于xml配置文件
+@Configuration  //定义一个配置类
+public class MyConfig{
+    // 给容器注册一个Bean，如果不指定bean的id，默认为方法名
+  @Bean
+  //@Bean(&quot;persionX&quot;) 给bean指定ID名称
+  public Person person(){
+    new Person(&quot;小小&quot;,23)
+  }
+}
+</code></pre>
+<hr>
+<blockquote>
+<p>@Componentscan<br>
+<strong>指定包的扫描范围，在指定包及其子包下的类只要标注了@Controller、@Service、@Repository、@Component等注解的类都会被注册到IOC容器中，@Componentscan(value=&quot;com.example.demo&quot;)注解加到在配置类(加了@Configuration的类或springboot的配置类(启动类))上，等同于xml配置的&lt;context:component-scan base-package=&quot;com.example.demo&quot;&gt;&lt;/context:component-scan&gt;</strong><br>
+<strong>@Componentscan的一些参数用法</strong></p>
+</blockquote>
+<pre><code class="language-java">excludeFilters过滤掉一些不需要被注册的类,FilterType.ANNOTATION以注解的类型过滤，
+过滤掉标注了@Controller的类,标注了@Controller注解的类不会被注册到IOC容器中
+//
+@Componentscan(value=&quot;com.example.demo&quot;,excludeFilters={
+    @Filter(type=FilterType.ANNOTATION,classes={Controller.class})
+})
+// ----------------------------------------------------------------------
+includeFilters 只包含，只注册满足扫描规则的类，只注册标注了@Service的类，
+注意:使用includeFilters还需要加上useDefaultFilters=false禁用掉默认的过滤规则，includeFilters才会生效，因为默认是扫描所有的注解驱动
+//
+@Componentscan(value=&quot;com.example.demo&quot;,includeFilters={
+    @Filter(type=FilterType.ANNOTATION,classes={Service.class})
+},useDefaultFilters=false)
+// ---------------------------
+FilterType的过滤规则类型
+FilterType.ANNOTATION : 按照注解过滤
+FilterType.ASSIGNABLE_TYPE：按照指定类型过滤
+//
+下面定义的FilterType.ASSIGNABLE_TYPE,classes={Hello.class}表示，只要是Hello类或者其子类都会被加载到IOC容器中
+@Componentscan(value=&quot;com.example.demo&quot;,includeFilters={
+    @Filter(type=FilterType.ANNOTATION,classes={Service.class}),
+   @Filter(type=FilterType.ASSIGNABLE_TYPE,classes={Hello.class})
+},useDefaultFilters=false))
+//
+FilterType.ASPECTJ：使用ASPECTJ表达式过滤
+FilterType.REGEX：使用正则表达式过滤
+//-----------------------------------------------------------------------
+FilterType.CUSTOM：使用自定义规则
+/**
+*使用FilterType.CUSTOM自定义扫描规则，编写自定义类MyTypeFilter，
+*需要实现org.springframework.core.type.filter.TypeFilter接口，重写match方法
+*如果match方法返回ture，则满足条件，当前扫描的类会被加载到IOC容器中，false则反之
+*/ 
+@Componentscan(value=&quot;com.example.demo&quot;,includeFilters={
+    @Filter(type=FilterType.CUSTOM,classes={MyTypeFilter.class})
+},useDefaultFilters=false))
+// --------------------------------------
+// 自定义的TypeFilter类，如果match方法返回ture，则满足条件，当前扫描的类会被加载到IOC容器中，false则反之
+public class MyTypeFilter implements TypeFilter {
+    /**
+     *
+     * @param metadataReader：读取到的当前正在扫描的类的信息
+     * @param metadataReaderFactory：可以获取到其他任何类的信息
+     */
+    @Override
+    public boolean match(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory) throws IOException {
+        // 获取当前正在扫描的类的信息
+        ClassMetadata classMetadata = metadataReader.getClassMetadata();
+        // 获取当前类的全类名(包+类名)
+        String className = classMetadata.getClassName();
+        System.out.println(&quot;当前扫描的类是：&quot;+className);
+        // 只有全类名包含Controller字符串的类才满足条件
+        if (className.contains(&quot;Controller&quot;)){
+            return true;
+        }
+        return false;
+    }
+}
+</code></pre>
+<p>java8之后ComponentScan注册加了@Repeatable(ComponentScans.class)，可以直接在配置类上标注多个@Componentscan，在java8之前想配置多个@Componentscan扫描，需要用@ComponentScans</p>
+<pre><code class="language-java">@Repeatable(ComponentScans.class)
+public @interface ComponentScan {}
+</code></pre>
+<blockquote>
+<p>#@Scope<br>
+指定bean的实例是单例还是多例，或者作用域，有4个属性值。<strong>默认为@Scope(&quot;singleton&quot;) 单例</strong><br>
+1.prototype：指定当前bean为多实例：spring容器启动时不会创建对象放到容器中，而是每次需要调用该bean时才会创建<br>
+2.singleton：指定当前bean为单例(默认)，spring容器启动时就会创建对象加载到容器中，每次调用该bean时直接从容器(map)中拿<br>
+3.request：同一个request请求使用同一个bean实例，只在web应用下生效<br>
+4.session：同一个session请求使用同一个bean实例，只在web应用下生效</p>
+</blockquote>
+<blockquote>
+<p>#@Lazy<br>
+该注解的作用是将bean创建设置为懒加载，针对于单例，spring容器启动时就会创建对象加载到容器中，如果在类上加上@Lazy注解，第一次调用该bean时才会去创建，然后放到spring容器中。之后的调用都从容器中获取</p>
+</blockquote>
+<blockquote>
+<p>#@Conditional<br>
+按照一定的条件进行判断，满足条件就给容器注册bean<br>
+标注在类或方法(一般是用于注册bean的方法(加了@Bean注册))上，只有满足条件才会给容器注册这个bean<br>
+自定义一个类(HelloConditional)通过实现Condition重写matches方法来编写判断条件的逻辑，matches方法返回true表示满足条件，就会给容器注册bean(就会执行hello方法，给容器注册Hello的bean)</p>
+</blockquote>
+<pre><code class="language-java">@Configuration
+public class MyConfig {
+    @Bean
+    @Conditional({HelloConditional.class})
+    public Hello hello(){
+        return new Hello();
+    }
+}
+// --------------------------------------------
+//自定义条件判断的类，实现Condition接口的matches方法，该方法返回true表示满足条件
+public class HelloConditional implements Condition {
+    /**
+     *
+     * @param context :判断条件使用的上下文
+     * @param metadata :注解信息
+     * @return
+     */
+    @Override
+    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        return true;
+    }
+}
+</code></pre>
+<blockquote>
+<p>#@Import<br>
+spring注册中给容器导入组件有几种方式，其中一种@Import，可以给容器快速导入组件 bean的id为全类名<br>
+@Import的使用方式<br>
+第一种使用方式：在配置类上加入@Import({Hello.class})，可以快速的把Hello的bean加入到容器中，bean的id为全类名。<br>
+第二种使用方式：@Import中传入实现了ImportSelector接口的类，并重写selectImports方法，这个方法的返回值就是需要导入到IOC容器的类的全类名<br>
+第三种使用方式：@Import中传入实现了ImportBeanDefinitionRegistrar接口的类，并重写registerBeanDefinitions方式来手工注册bean(看下面代码例子)</p>
+</blockquote>
+<pre><code class="language-java">方式一，将Hello类注册到IOC容器
+@Configuration
+// 将hello加入到IOC容器中
+@Import({Hello.class})
+public class MyConfig {
+}
+方式二,将Hello类注册到IOC容器(不变)，MyImportSelector实现了ImportSelector 接口，会把返回值所有类注册到IOC容器中
+@Configuration
+// 将hello和MyImportSelector返回的组数中的所有类加入到IOC容器中
+@Import({Hello.class,MyImportSelector.class})
+public class MyConfig {
+}
+实现了ImportSelector的类
+public class MyImportSelector implements ImportSelector {
+    /**
+     *
+     * @param importingClassMetadata :当前标注了@Import注解的类(当前正在扫描的类)的所有注解
+     * @return 返回值就是需要导入到容器中的组件数组(全类名)
+     */
+    @Override
+    public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+        return new String[]{&quot;com.example.myspringbootstartautoconfigurer.HelloImport&quot;};
+    }
+}
+
+// ------------------------------
+方式三，通过实现ImportBeanDefinitionRegistrar接口手工将MyBean类注册到容器中，bean id为myBean666
+@Import({MyImportBeanDefinitionRegistrar.class})
+public class MyConfig {
+}
+// --
+ImportBeanDefinitionRegistrar的实现类
+public class MyImportBeanDefinitionRegistrar implements ImportBeanDefinitionRegistrar {
+
+    /**
+     *
+     * @param importingClassMetadata : 当前加了@Import类的注解信息
+     * @param registry :BeanDefinition注册类  可以把需要注册到容器的bean通过registry.registerBeanDefinition方法手工注册到容器中
+     */
+    @Override
+    public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+        // bean的定义信息
+        RootBeanDefinition rootBeanDefinition = new RootBeanDefinition(MyBean.class);
+        // 手工注册bean  第一个参数为bean的id，第二个为beanDefinition  bean的定义信息
+        registry.registerBeanDefinition(&quot;myBean666&quot;,rootBeanDefinition);
+    }
+}
+</code></pre>
+<p>给容器注册组件(bean)的几种方式<br>
+1.包扫描+组件标注注解(@Service、@Controller、@Repository、@Componet)，这种方式用于导入自己写的类<br>
+2.@Bean方式导入，常用入导入第三方包里面的类   默认bean id为导入执行的方法名<br>
+3.@Import方式导入(有三种用法)，默认的bean id为全类名<br>
+4.通过FactoryBean(工厂bean)</p>
+<blockquote>
+<p>#通过FactoryBean(工厂bean)给容器注册bean<br>
+通过实现FactoryBean<T>接口来创建bean<br>
+1.如果通过applicationContext.getBean(&quot;helloFactoryBean &quot;)来获取，获取到的对象是工厂bean调用getObject创建的对象，即Hello对象<br>
+2.要获取工厂bean本身(HelloFactoryBean对象)，需要在id前面加一个&amp;,即<br>
+applicationContext.getBean(&quot;&amp;helloFactoryBean &quot;)。因为spring的BeanFactory定义了来获取工厂bean本身<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E5%B8%B8%E7%94%A8-1.jpg" alt="image" loading="lazy"><br>
+3.如果通过@Autowired来获取的是工厂bean本身(HelloFactoryBean对象)<br>
+@Autowired<br>
+private HelloFactoryBean helloFactoryBean;</p>
+</blockquote>
+<pre><code>@Component
+public class HelloFactoryBean implements FactoryBean&lt;Hello&gt; {
+    // 返回一个对象，这个对象会被注册到容器中
+    @Override
+    public Hello getObject() throws Exception {
+        return new Hello();
+    }
+    // 返回对应的类型
+    @Override
+    public Class&lt;?&gt; getObjectType() {
+        return null;
+    }
+    // 是否单例 true为单例
+    // false是多例，每次获取都会创建一个实例
+    @Override
+    public boolean isSingleton() {
+        return false;
+    }
+}
+</code></pre>
+<blockquote>
+<p>#@PropertySource<br>
+读取外部配置文件中的k/v保存到运行环境变量(environment)中<br>
+#@Value()给属性赋值，可以读取到环境变量(environment)中的值</p>
+</blockquote>
+<pre><code>// 读取hello.properties配置文件的信息并保存到运行环境变量(environment)中 
+@PropertySource({&quot;classpath:/hello.properties&quot;})
+@Configuration
+public class MyConfig {
+}
+// @Value()读取配置文件中的值，下面代码表示如果配置文件中有hello.name的key，就读取它的value并赋值给name，没有就默认将666赋值给name
+@Value(&quot;${hello.name:666}&quot;)
+public String name;
+</code></pre>
+<hr>
+<p>#自动装配注解</p>
+<blockquote>
+<p>#@Autowired<br>
+1.使用@Autowired自动注入(默认required=ture，表示必须注入，找不到对应的组件就会报错)，默认优先按照类型去容器中找对应的组件进行注入<br>
+2.如果容器中有多个相同类型的组件(bean)，会通过属性的名称作为组件的id去容器中查找<br>
+3.也可以通过@Qualifier指定组件的id进行装配</p>
+</blockquote>
+<pre><code>public class HelloService {
+默认会先找HelloProperties这个类型进行注入
+如果容器中有多个HelloProperties类型的bean，会通过属性的名称作为组件的id去容器中查找
+也可以通过@Qualifier指定组件的id进行装配    (默认为@Qualifier(&quot;属性名&quot;))
+    @Qualifier(&quot;helloProperties2&quot;)      // 默认为@Qualifier(&quot;属性名&quot;)
+    @Autowired
+    HelloProperties helloProperties;
+}
+</code></pre>
+<blockquote>
+<p>#@Autowired使用在map&lt;String,T&gt;上<br>
+会自动将所有T类型的bean保存到map中，key为bean的id，value为bean对象</p>
+</blockquote>
+<pre><code>自动将所有Hello类型(包括子类)的bean保存到map中，key为bean的id，value为bean对象
+public class HelloService {
+    @Autowired
+    private  Map&lt;String,HelloProperties&gt; map;
+}
+</code></pre>
+<blockquote>
+<p>#@Autowired在构造方法上的使用，可以将构造方法上的参数自动注入<br>
+这种方式是在执行构造方法的时候就已经把参数注入了，而@Autowired写在属性上(上面的例子)，是执行完构造方法后才注入的</p>
+</blockquote>
+<pre><code>public class HelloService {
+ 默认不写@Autowired也是能注入的，
+ 也可以写在参数前面  @Autowired HelloProperties helloProperties
+     @Autowired       
+    public HelloService(HelloProperties helloProperties ){
+        System.out.println(helloProperties );
+    }
+
+}
+</code></pre>
+<blockquote>
+<p>#@Autowired + @Bean，注册组件时传入的参数自动注入</p>
+</blockquote>
+<pre><code>@Configuration
+public class MyConfig {
+    @Autowired    //自动注入hello参数   默认不加@Autowired也会自动注入
+    @Bean()
+    public HelloService helloService(Hello hello){
+        HelloService helloService = new HelloService();
+        helloService.setHello(hello);
+        return helloService;
+    }
+}
+</code></pre>
+<hr>
+<p>#管理Bean的生命周期<br>
+-bean创建-&gt;初始化-&gt;销毁</p>
+<blockquote>
+<p>#自定义bean的初始化和销毁方法<br>
+#####1.通过@Bean(initMethod=&quot;&quot;,destroyMethod=&quot;&quot;)指定初始化和销毁时的方法<br>
+#####构造函数：创建实例时调用，单实例对象在容器启动时就会创建bean(调用构造函数)，多实例对象在每次获取时才调用<br>
+#####初始化方法：对象创建(调用构造函数)完成并赋值后调用会调用初始化方法<br>
+#####销毁方法：对于单例对象容器正常关闭时调用，但多实例对象是不会调用销毁方法的</p>
+</blockquote>
+<pre><code>@Configuration
+public class MyConfig {
+    // 创建Hello的bean实例，通过initMethod指定初始化方法，destroyMethod指定销毁方法 
+    @Bean(initMethod = &quot;init&quot;,destroyMethod = &quot;destroy&quot;)
+    public Hello hello(){
+        return new Hello();
+    }
+}
+// Hello类
+public class Hello {
+    public String name;
+    public Hello(){
+// 无参构造方法，创建bean时就调用
+        System.out.println(&quot;hello构造方法执行......&quot;);
+    }
+    // 自定义Hello的的初始化执行方法  在@Bean中指定这个方法为初始化方法即可
+    public void init(){
+        System.out.println(&quot;init......&quot;);
+    }
+    // 自定义Hello的的销毁执行方法  在@Bean中指定这个方法为销毁方法即可
+    public void destroy(){
+        System.out.println(&quot;destroy.......&quot;);
+    }
+
+}
+</code></pre>
+<blockquote>
+<p>#####2.通过实现InitializingBean接口的afterPropertiesSet方法自定义初始化和DisposableBean的destroy方法销毁</p>
+</blockquote>
+<pre><code>@Component
+public class HelloL implements InitializingBean,DisposableBean{
+    public HelloL(){
+        System.out.println(&quot;HelloL......构造方法&quot;);
+    }
+    // 销毁时调用
+    @Override
+    public void destroy() throws Exception {
+        System.out.println(&quot;HelloL....destroy&quot;);
+    }
+    // 对象创建并且属性赋值完之后，调用的初始化方法
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        System.out.println(&quot;HelloL....afterPropertiesSet&quot;);
+    }
+}
+</code></pre>
+<blockquote>
+<p>#####3.使用JSR520的注解自定义初始化和销毁方法<br>
+@PostConstruct：在bean创建并完成赋值后执行的初始化方法<br>
+@PreDestroy：在容器销毁bean之前执行的方法</p>
+</blockquote>
+<pre><code>@Component
+public class HelloPost {
+
+    public HelloPost(){
+        System.out.println(&quot;HelloPost......构造方法&quot;);
+    }
+//在bean创建并完成赋值后执行的初始化方法
+    @PostConstruct
+    public void init(){
+        System.out.println(&quot;HelloPost.......@PostConstruct&quot;);
+    }
+//在容器销毁bean之前执行的方法
+    @PreDestroy
+    public void destroy(){
+        System.out.println(&quot;HelloPost.......@PreDestroy&quot;);
+    }
+}
+</code></pre>
+<hr>
+<p>#后置处理器<br>
+#####场景：比如在bean创建时将spring的一些底屋组件注入到bean中，或者初始化前后进行拦截处理</p>
+<blockquote>
+<p>#BeanPostProcessor接口(Bean的后置处理器)  ，bean创建对象初始化前后进行拦截处理<br>
+postProcessBeforeInitialization方法：在每个bean的初始化方法调用之前会调用这个方法<br>
+postProcessAfterInitialization方法：在每个bean的初始化方法调用之后会调用这个方法<br>
+#####自定义后置处理器，实现BeanPostProcessor接口，会处理所有的bean</p>
+</blockquote>
+<pre><code>@Component
+public class MyBeanPostProcessor implements BeanPostProcessor {
+
+// 在每个bean的初始化方法调用之前都会调用执行方法
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        System.out.println(&quot;postProcessBeforeInitialization...&quot;+beanName);
+        return bean;
+    }
+//在每个bean的初始化方法调用之前都会调用执行方法
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        System.out.println(&quot;postProcessAfterInitialization...&quot;+beanName);
+        return bean;
+    }
+}
+</code></pre>
+<p>#Aware注入spring底层组件(其原理是通过后置处理器来实现的)<br>
+applicationContextAeare和EmbeddedValueResolverAeare都是通过ApplicationContextAwareProcessor后置处理器来实现的</p>
+<blockquote>
+<p>如果需要使用spring底层组件如applicationContext、BeanFactroy、EmbeddedValueResolver等，可以通过实现对应的xxxAeare接口,在创建对象时会调用接口规定的方法注入相关组件(比BeanPostProcessor的方法<strong>先</strong>执行)。</p>
+</blockquote>
+<pre><code>@Component
+public class HelloPost implements ApplicationContextAware,BeanNameAware,EmbeddedValueResolverAware{
+    private ApplicationContext applicationContext;
+    public HelloPost(){
+        System.out.println(&quot;HelloPost......构造方法&quot;);
+    }
+    @PostConstruct
+    public void init(){
+        System.out.println(&quot;HelloPost.......@PostConstruct&quot;);
+    }
+    @PreDestroy
+    public void destroy(){
+        System.out.println(&quot;HelloPost.......@PreDestroy&quot;);
+    }
+
+    // 注入ApplicationContext对象
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        System.out.println(&quot;appilcation...................&quot;);
+        this.applicationContext=applicationContext;
+    }
+
+    // 注入bean的名称
+    @Override
+    public void setBeanName(String name) {
+        System.out.println(name);
+    }
+
+    // 注入StringValueResolver，这个类的作用是用来解析字符串的占位符
+    @Override
+    public void setEmbeddedValueResolver(StringValueResolver resolver) {
+        System.out.println(resolver.resolveStringValue(&quot;当前操作系统：${os.name}&quot;));
+    }
+}
+</code></pre>
+<hr>
+<p>#Bean工厂后置处理器</p>
+<blockquote>
+<p>#BeanFactoryPostProcessor接口<br>
+在Bean标准初始化之后调用(所有的baen定义信息已经保存加载到beanFactory,但是bean的实例还未创建)，可以定制和修改BeanFactory的内容</p>
+</blockquote>
+<pre><code>/**
+ * 在BeanFactory标准初始化之后(所有的baen定义信息已经保存加载到beanFactory,但是bean的实例还未创建)调用
+ * 意思就是在baen定义信息(类名,socpe作用域，类属性等信息)加载完成之后调用(此时bean的实例还未创建)
+ */
+@Component
+public class MyBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        // 获取所有bean定义的id
+        String[] beanDefinitionNames = beanFactory.getBeanDefinitionNames();
+    }
+}
+</code></pre>
+<blockquote>
+<p>#BeanDefinitionRegistryPostProcessor接口<br>
+bean定义信息(BeanDefinitionRegistry)的后置处理器<br>
+这个接口extends BeanFactoryPostProcessor，在bean定义信息将要被加载时调用(bean实例还未创建)，可手动把某个bean的定义信息加载进BeanDefinitionRegistry</p>
+</blockquote>
+<pre><code>@Component
+public class MyBeanDefinitionRegistryPostProcessor implements BeanDefinitionRegistryPostProcessor {
+    // BeanDefinitionRegistry是 Bean定义信息的存储中心
+    // 以后BeanFactory就是按BeanDefinitionRegistry里面保存的每一个bean定义信息来创建bean实例的
+    @Override
+    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+        System.out.println(&quot;postProcessBeanDefinitionRegistry..........bean的数量：&quot;+registry.getBeanDefinitionCount());
+        // 手动将某个bean的定义信息加载到BeanDefinitionRegistry中
+        RootBeanDefinition rootBeanDefinition = new RootBeanDefinition(Hello.class);
+        registry.registerBeanDefinition(&quot;helloBeanDefinition&quot;,rootBeanDefinition);
+    }
+
+  // 这是父类BeanFactoryPostProcessor的方法
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        System.out.println(&quot;子类postProcessBeanFactory..........bean的数量：&quot;+beanFactory.getBeanDefinitionCount());
+
+    }
+}
+</code></pre>
+<p>BeanFactoryPostProcessor是在bean定义信息加载完成后调用<br>
+BeanDefinitionRegistryPostProcessor是在bean定义信息将要加载时调用<br>
+先执行BeanDefinitionRegistryPostProcessor的实现类再执行BeanFactoryPostProcessor的实现类</p>
+<hr>
+<figure data-type="image" tabindex="1"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E5%B8%B8%E7%94%A8-2.jpg" alt="Bean的生命周期流程图" loading="lazy"></figure>
+<p>创建bean的源码位置<br>
+org.springframework.context.support.AbstractApplicationContext#finishBeanFactoryInitialization<br>
+-&gt;org.springframework.beans.factory.BeanFactory#getBean(java.lang.String, java.lang.Class<T>)<br>
+--&gt;org.springframework.beans.factory.support.AbstractBeanFactory#createBean<br>
+---&gt;org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#doCreateBean<br>
+执行bean对象的实例化<br>
+-&gt;org.springframework.beans.factory.support.AbstractBeanFactory#createBean<br>
+给bean的属性赋值<br>
+org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#populateBean</p>
+<p>initializeBean方法主要做了三个操作1.循环执行后置处理器的的前置方法(applyBeanPostProcessorsBeforeInitialization)、2.再执行初始化方法(invokeInitMethods)，3.再执行后置处理器的的后置方法(applyBeanPostProcessorsAfterInitialization)<br>
+org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#initializeBean(java.lang.String, java.lang.Object, org.springframework.beans.factory.support.RootBeanDefinition)</p>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/spring-rong-qi-qi-dong-yuan-ma-fen-xi/">
+              <h3 class="post-title">
+                下一篇：spring容器启动源码分析
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

@@ -1,0 +1,258 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>营销项目策略+模板方法+工厂运用 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">营销项目策略+模板方法+工厂运用</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2019-07-03</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <p>在之前做的营销项目中，优惠券有满减券和折扣券类型(后面会增加类型)，这两种类型的计算规则是不一样的，满减是用减法，折扣是用%。如果用if(满减){}else if(折扣){}来处理，那么就显得很low<br>
+这种场景使用了策略+模板方法+工厂。策略就是替代了 if else ，模板方法是将满减券和折扣券都需要用到的逻辑写到抽象父类上让这两种类型继承，就可以复用方法，工厂主要是通过spring的ioc注入来实现。<br>
+直接代码展示</p>
+<p>首先定义优惠券计算的接口</p>
+<pre><code class="language-java">public interface ICouponCalculate {
+    /**
+     * 优惠计算方法定义
+     */
+    CalculateResultDTO calculate(RulesExecuteReqDTO rulesExecuteReqDTO);
+
+    /**
+     * 计算规则对应的枚举
+     *
+     * @return
+     */
+    MarketingTypeEnum calculateType();
+
+  // 这里主要是当获取不到对应优惠券类型的策略类，就默认获取这个类来报错提示
+    ICouponCalculate DEFAULT_IMPLEMENT = new ICouponCalculate() {
+
+        @Override
+        public CalculateResultDTO calculate(RulesExecuteReqDTO rulesExecuteReqDTO) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public MarketingTypeEnum calculateType() {
+            throw new UnsupportedOperationException();
+        }
+    };
+
+}
+</code></pre>
+<p>然后定义策略类的优惠券计算的抽象父类  实现优惠券计算的接口</p>
+<pre><code class="language-java">public abstract class CouponCalculateAbstract implements ICouponCalculate {
+    public final static double PERCENT = 0.01;
+
+    public final static double MIN_KHR = 1;
+    public final static double MIN_USD = 0.01;
+// 美元的优惠金额必须满0.01元，不然不能使用这张优惠券，HKR必需满1元
+// 这个方法满减券和折扣券都需要用到，所以写到父类上
+    protected boolean isDiscount(CurrencyTypeEnum currencyType, int calculateKHR, double calculateUSD) {
+        if (currencyType.equals(CurrencyTypeEnum.KHR)) {
+            if (calculateKHR &lt; MIN_KHR) {
+                // KHR少于1元，不返现
+                log.info(&quot;KHR优惠金额小于1&quot;);
+                return false;
+            }
+        }
+        if (currencyType.equals(CurrencyTypeEnum.USD)) {
+            if (calculateUSD &lt; MIN_USD) {
+                // USD少于0.01元，不返现
+                log.info(&quot;USD优惠金额小于0.01&quot;);
+                return false;
+            }
+        }
+        return true;
+    }
+</code></pre>
+<p>然后写具体类型的策略类，继承抽象父类<br>
+满减策略类</p>
+<pre><code>@Component
+public class FullCouponCalculateStrategy extends CouponCalculateAbstract {
+    @Override
+    public CalculateResultDTO calculate(RulesExecuteReqDTO rulesExecuteReqDTO) {
+        log.info(&quot;满减优惠券计算&quot;);
+      ......
+        return calculateResultDTO;
+    }
+    @Override
+    public MarketingTypeEnum calculateType() {
+        return MarketingTypeEnum.FULL_COUPON;
+    }
+}
+</code></pre>
+<p>折扣策略类</p>
+<pre><code class="language-java">@Component
+public class DiscountCouponCalculateStrategy extends CouponCalculateAbstract {
+    @Override
+    public CalculateResultDTO calculate(RulesExecuteReqDTO rulesExecuteReqDTO) {
+        log.info(&quot;折扣优惠券计算&quot;);
+       业务代码省略......
+        return calculateResultDTO;
+    }
+
+    @Override
+    public MarketingTypeEnum calculateType() {
+        return MarketingTypeEnum.DISCOUNT_COUPON;
+    }
+}
+</code></pre>
+<p>运行策略的Context类，首先通过构造方法IOC注入方式获取到所有的优惠券计算实现类，然后封装map中 key对应类型的枚举，value为具体实现类。这个map相当于策略类的工厂</p>
+<pre><code class="language-java">@Component
+public class CouponCalculateStrategyContext {
+    // 定义map，优惠券类型对应计算类
+    Map&lt;MarketingTypeEnum, ICouponCalculate&gt; calculateMap = new EnumMap&lt;&gt;(MarketingTypeEnum.class);
+
+    // 初始化calculateMap，将对应的关系存到calculateMap中
+    @Autowired
+    public CouponCalculateStrategyContext(final Map&lt;String, ICouponCalculate&gt; instanceMap) {
+        // 将Map&lt;String, ICalculate&gt; calculateInstance传成对应计算规则的枚举Map&lt;RegisteredCashBackTypeEnum, ICalculate&gt;
+        Map&lt;MarketingTypeEnum, ICouponCalculate&gt; collect = instanceMap.values().stream()
+                .filter(iCouponCalculate -&gt; iCouponCalculate.calculateType() != null)
+                .collect(Collectors.toMap(ICouponCalculate::calculateType, iCouponCalculate -&gt; iCouponCalculate));
+        calculateMap.putAll(collect);
+    }
+
+    // 执行策略方法
+    public CalculateResultDTO doCouponCalculate(MarketingTypeEnum marketingType, RulesExecuteReqDTO rulesExecuteReqDTO) {
+        ICouponCalculate couponCalculate = calculateMap.getOrDefault(marketingType, DEFAULT_IMPLEMENT);
+        return couponCalculate.calculate(rulesExecuteReqDTO);
+    }
+
+}
+</code></pre>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/fen-bu-shi-ren-wu-diao-du-zhi-xxl-job/">
+              <h3 class="post-title">
+                下一篇：分布式任务调度之XXL-JOB
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

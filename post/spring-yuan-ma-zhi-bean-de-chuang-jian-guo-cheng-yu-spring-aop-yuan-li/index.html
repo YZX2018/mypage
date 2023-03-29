@@ -1,0 +1,714 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>spring源码之Bean的创建过程与Spring AOP原理 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">spring源码之Bean的创建过程与Spring AOP原理</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2019-07-13</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <p>#Bean的创建过程<br>
+#####spring注解版单实例Bean的创建是容器启动的时候调用getBean(beanName)创建，然后保存到IOC容器中；多实例Bean每次都会getBean(beanName)创建新的实例<br>
+调用的方法是<br>
+<strong>org.springframework.context.support.AbstractApplicationContext#refresh</strong><br>
+ <strong>org.springframework.context.support.AbstractApplicationContext#finishBeanFactoryInitialization</strong><br>
+  <strong>org.springframework.beans.factory.config.ConfigurableListableBeanFactory#preInstantiateSingletons</strong><br>
+   <strong>org.springframework.beans.factory.support.AbstractBeanFactory#getBean(java.lang.String)</strong><br>
+    <strong>org.springframework.beans.factory.support.AbstractBeanFactory#doGetBean</strong></p>
+<p>#####getBean(java.lang.String)方法调用了doGetBean(name, null, null, false)处理Bean的创建<br>
+我们来看看doGetBean()做了哪些处理，<strong>这里主要分析单实例Bean的创建过程</strong>。</p>
+<pre><code>protected &lt;T&gt; T doGetBean(final String name, @Nullable final Class&lt;T&gt; requiredType,
+			@Nullable final Object[] args, boolean typeCheckOnly) throws BeansException {
+
+		final String beanName = transformedBeanName(name);
+		Object bean;
+
+		// 1.先获取缓存中保存的单实例Bean。如果能获取到说明这个Bean之前被创建过（所有创建过的单实例Bean都会被缓存起来），如果bean的定义信息scope是多例，就不会被缓存
+		Object sharedInstance = getSingleton(beanName);
+		if (sharedInstance != null &amp;&amp; args == null) {
+			......
+             // 如果缓存中有,判断这个Bean是否是FactoryBean，如果不是FactoryBean，直接返回sharedInstance
+			bean = getObjectForBeanInstance(sharedInstance, name, beanName, null);
+		}
+              // 2.如果缓存中不存在对应Bean的实例
+		else {
+			// 判断这个bean是否正在创建中
+			if (isPrototypeCurrentlyInCreation(beanName)) {
+				throw new BeanCurrentlyInCreationException(beanName);
+			}
+
+		......忽略部份代码
+                        
+			if (!typeCheckOnly) {
+                // 3.标记当前bean已经被创建（或即将创建）
+				markBeanAsCreated(beanName);
+			}
+
+			try {
+                              //4.获取Bean的定义信息
+				final RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
+				checkMergedBeanDefinition(mbd, beanName, args);
+
+				// 5.获取当前Bean所依赖的其他Bean
+				String[] dependsOn = mbd.getDependsOn();
+				if (dependsOn != null) {
+					for (String dep : dependsOn) {
+						if (isDependent(beanName, dep)) {
+							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
+									&quot;Circular depends-on relationship between '&quot; + beanName + &quot;' and '&quot; + dep + &quot;'&quot;);
+						}
+						registerDependentBean(dep, beanName);
+						try {
+                         // 6.如果当前Bean依赖了其他Bean，通过getBean()先把所依赖的Bean先创建出来
+							getBean(dep);
+						}
+						catch (NoSuchBeanDefinitionException ex) {
+							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
+									&quot;'&quot; + beanName + &quot;' depends on missing bean '&quot; + dep + &quot;'&quot;, ex);
+						}
+					}
+				}
+
+				// 7.如果是单实例Bean
+				if (mbd.isSingleton()) {
+                     // 创建Bean实例对象并添加到IOC容器中
+					sharedInstance = getSingleton(beanName, () -&gt; {
+						try {
+                                  //8.单实例Bean的创建
+							return createBean(beanName, mbd, args);
+						}
+						catch (BeansException ex) {
+							destroySingleton(beanName);
+							throw ex;
+						}
+					});
+                                      // 判断当前Bean是不是FactoryBean，不是就直接返回sharedInstance(原来的Bean实例)
+					bean = getObjectForBeanInstance(sharedInstance, name, beanName, mbd);
+				}
+                           
+......忽略部份代码
+	}
+</code></pre>
+<p>上**面代码 8.单实例Bean的创建，getSingleton方法内调用了createBean(beanName, mbd, args)是创建Bean的流程   分析createBean(beanName, mbd, args) **</p>
+<pre><code>protected Object createBean(String beanName, RootBeanDefinition mbd, @Nullable Object[] args)
+			throws BeanCreationException {
+
+		if (logger.isTraceEnabled()) {
+			logger.trace(&quot;Creating instance of bean '&quot; + beanName + &quot;'&quot;);
+		}
+		RootBeanDefinition mbdToUse = mbd;
+
+		
+		......忽略部份代码
+
+		try {
+           //让BeanPostProcessors(后置处理器)有机会返回代理而不是目标bean实例
+	    // 判断容器中是否有InstantiationAwareBeanPostProcessor的实现(比如开启AOP时就会调用)，如果有则执行InstantiationAwareBeanPostProcessor
+          // InstantiationAwareBeanPostProcessors会先触发：postProcessBeforeInstantiation()；
+          //如果有返回值(一般不会有返回值)：再触发postProcessAfterInitialization()
+			Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
+			if (bean != null) {
+				return bean;
+			}
+		}
+		catch (Throwable ex) {
+			throw new BeanCreationException(mbdToUse.getResourceDescription(), beanName,
+					&quot;BeanPostProcessor before instantiation of bean failed&quot;, ex);
+		}
+
+		try {
+             // 如果前面的InstantiationAwareBeanPostProcessor没有返回代理对象，调用doCreateBean创建
+			Object beanInstance = doCreateBean(beanName, mbdToUse, args);
+			if (logger.isTraceEnabled()) {
+				logger.trace(&quot;Finished creating instance of bean '&quot; + beanName + &quot;'&quot;);
+			}
+			return beanInstance;
+		}
+		......
+	}
+</code></pre>
+<p>最终调用doCreateBean(beanName, mbdToUse, args)方法创建完成Bean的创建</p>
+<pre><code>protected Object doCreateBean(final String beanName, final RootBeanDefinition mbd, final @Nullable Object[] args)
+			throws BeanCreationException {
+
+		// Instantiate the bean.
+              //BeanWrapper  存储对象的实例
+		BeanWrapper instanceWrapper = null;
+		if (mbd.isSingleton()) {
+			instanceWrapper = this.factoryBeanInstanceCache.remove(beanName);
+		}
+		if (instanceWrapper == null) {
+                        // 1.创建Bean实例(利用工厂方法或者对象的构造器创建出Bean实例)
+			instanceWrapper = createBeanInstance(beanName, mbd, args);
+		}
+		......
+
+		// Allow post-processors to modify the merged bean definition.
+		synchronized (mbd.postProcessingLock) {
+			if (!mbd.postProcessed) {
+				try {
+             //  2.调用MergedBeanDefinitionPostProcessor(后置处理器)的postProcessMergedBeanDefinition方法
+					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
+				}
+				catch (Throwable ex) {
+					throw new BeanCreationException(mbd.getResourceDescription(), beanName,
+							&quot;Post-processing of merged bean definition failed&quot;, ex);
+				}
+				mbd.postProcessed = true;
+			}
+		}
+
+		......
+
+		// Initialize the bean instance.   初始化bean实例
+		Object exposedObject = bean;
+		try {
+  // 3.给bean的属性赋值
+      // 1)赋值之前会从容器中获取InstantiationAwareBeanPostProcessor(后置处理器)执行  postProcessProperties()
+     // 2)再执行postProcessPropertyValues() (应用Bean属性的值,即可以对属性值进行修改(这个时候属性值还未被设置(还未调用set赋值)，但是我们可以修改原本该设置进去的属性值))
+     // 3)最后属性利用setter方法等进行赋值 applyPropertyValues(beanName, mbd, bw, pvs)
+			populateBean(beanName, mbd, instanceWrapper);
+            // 4.Bean初始化
+                //1) invokeAwareMethods(beanName, bean);执行xxxAware接口的方法
+                // 2)applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName) 执行后置处理器初始化的前置方法(bean初始化之前调用)  BeanPostProcessor.postProcessBeforeInitialization（）
+                // 3)执行初始化方法 
+                          //1)如果该Bean实现了InitializingBean接口；执行接口规定的初始化    
+                         // 2)如果指定了自定义初始化方法( @Bean(initMethod = &quot;init&quot;))，执行自定义初始化方法
+                //4.applyBeanPostProcessorsAfterInitialization执行后置处理器初始化的后置方法(bean初始化之后调用)BeanPostProcessor.postProcessAfterInitialization()		
+exposedObject = initializeBean(beanName, exposedObject, mbd)
+		}
+		catch (Throwable ex) {
+			if (ex instanceof BeanCreationException &amp;&amp; beanName.equals(((BeanCreationException) ex).getBeanName())) {
+				throw (BeanCreationException) ex;
+			}
+			else {
+				throw new BeanCreationException(
+						mbd.getResourceDescription(), beanName, &quot;Initialization of bean failed&quot;, ex);
+			}
+		}
+
+		......
+		// Register bean as disposable.
+		try {
+                       // 注册Bean的销毁方法
+			registerDisposableBeanIfNecessary(beanName, bean, mbd);
+		}
+		catch (BeanDefinitionValidationException ex) {
+			throw new BeanCreationException(
+					mbd.getResourceDescription(), beanName, &quot;Invalid destruction signature&quot;, ex);
+		}
+
+		return exposedObject;
+	}
+</code></pre>
+<p>createBean创建完成之后返回Bean实例对象然后继续走getSingleton方法将Bean实例缓存到容器的singletonObjects的Map中（调用addSingleton()）</p>
+<pre><code>if (mbd.isSingleton()) {
+                     // createBean创建Bean实例对象，getSingleton将其缓存到singletonObjects的Map中
+					sharedInstance = getSingleton(beanName, () -&gt; {
+						try {
+                                  //8.单实例Bean的创建
+							return createBean(beanName, mbd, args);
+						}
+						catch (BeansException ex) {
+							destroySingleton(beanName);
+							throw ex;
+						}
+					});
+                    // 判断当前Bean是不是FactoryBean，不是就直接返回sharedInstance(原来的Bean实例)
+					bean = getObjectForBeanInstance(sharedInstance, name, beanName, mbd);
+				}
+</code></pre>
+<p>总结单实例Bean的创建过程</p>
+<blockquote>
+<p>#####getBean(beanName) 创建对象<br>
+##### 1.doGetBean(name, null, null, false)<br>
+  1)先获取缓存中保存的单实例Bean。如果能获取到说明这个Bean之前被创建过，直接返回回（所有创建过的单实例Bean都会被缓存起来，如果bean的定义信息scope是多例，就不会被缓存）<br>
+  2)缓存中获取不到，开始Bean的创建对象流程<br>
+  3)标记当前bean已经被创建（或即将创建）<br>
+  4)获取Bean的定义信息(依赖、属性、作用域等Bean的信息都存在BeanDefinition)<br>
+  5)从定义信息中getDependsOn获取当前Bean所依赖的其他Bean,如果有调用getBean()把依赖的Bean先创建出来(<strong>注意，这个依赖是指@DependsOn指定的其他bean，当前bean的属性依赖</strong>)<br>
+  6)createBean(beanName, mbd, args)  创建当前Bean的实例对象<br>
+    1、调用Object bean = resolveBeforeInstantiation(beanName, mbdToUse); 让BeanPostProcessors(后置处理器)有机会返回代理而不是目标bean实例，判断容器中是否有InstantiationAwareBeanPostProcessor的实现(比如开启AOP时就会调用)，如果有InstantiationAwareBeanPostProcessors会先触发：postProcessBeforeInstantiation()；如果有返回值(一般不会有返回值)：再触发postProcessAfterInitialization()<br>
+    2、如果前面的InstantiationAwareBeanPostProcessor没有返回代理对象，调用doCreateBean创建<br>
+    3、Object beanInstance = doCreateBean(beanName, mbdToUse, args) 创建Bean实例对象<br>
+      1.instanceWrapper = createBeanInstance(beanName, mbd, args); 创建Bean实例(利用工厂方法或者对象的构造器创建出Bean实例)<br>
+      2.applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);从容器中获取MergedBeanDefinitionPostProcessor(后置处理器)并调用postProcessMergedBeanDefinition方法<br>
+      3.populateBean(beanName, mbd, instanceWrapper); 给Bean属性赋值<br>
+        1/赋值之前会从容器中获取InstantiationAwareBeanPostProcessor(后置处理器)<br>
+        2/执行InstantiationAwareBeanPostProcessor的postProcessProperties()进行处理<br>
+        3/再执行postProcessPropertyValues() (应用Bean属性的值,即可以对属性值进行修改(这个时候属性值还未被设置(还未调用set赋值)，但是我们可以修改原本该设置进去的属性值))<br>
+        4/最后属性利用setter方法进行赋值 applyPropertyValues(beanName, mbd, bw, pvs)<br>
+      4.initializeBean(beanName, exposedObject, mbd); 对Bean进行初始化处理<br>
+        1/invokeAwareMethods(beanName, bean);判断当前Bean是否实现了xxxAware的接口，如果是就执行xxxAware接口的方法(比如ApplicationContextAware:setApplicationContext())<br>
+        2/applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName) 后置处理器的前置处理BeanPostProcessor.postProcessBeforeInitialization() (bean初始化之前调用)<br>
+        3/执行初始化方法，首先判断：如果该Bean实现了InitializingBean接口,执行接口规定的初始化 。然后判断：如果指定了自定义初始化方法( @Bean(initMethod = &quot;init&quot;))，执行自定义初始化init方法<br>
+        4/applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName)执行后置处理器后置方法BeanPostProcessor.postProcessAfterInitialization()(bean初始化之后调用)<br>
+      5.registerDisposableBeanIfNecessary(beanName, bean, mbd); 注册Bean的销毁方法<br>
+  7)Bean创建完成后，执行getSingleton方法将创建的Bean添加到IOC容器中(缓存到singletonObjects(Map集合)中，IOC容器有很多个map集合，这是其中一个)</p>
+</blockquote>
+<hr>
+<p>#####Bean生命周期流程图<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-1.jpg" alt="Bean生命周期流程图" loading="lazy"></p>
+<hr>
+<p>#spring aop的原理分析<br>
+AOP：面向切面的编程，在方法运行时，动态将方法切入到其他代码中运行<br>
+切面（@Aspect）、切入点（@Pointcut）通知(@Before、@After、@AfterReturning、@AfterThrowing、@Around)</p>
+<p>spring注解方式开启aop功能只需要在配置类上加上@EnableAspectJAutoProxy注解</p>
+<pre><code>@Configuration
+@EnableAspectJAutoProxy
+public class DemoApplication {
+	public static void main(String[] args) {
+    AnnotationConfigApplicationContext applicationContextionContext = new AnnotationConfigApplicationContext(DemoApplication.class);
+}
+</code></pre>
+<p>AOP原理主要通过@EnableAspectJAutoProxy注解来实现<br>
+#####分析@EnableAspectJAutoProxy<br>
+点进@EnableAspectJAutoProxy中，发现@Import(AspectJAutoProxyRegistrar.class)，这个注解作用是把AspectJAutoProxyRegistrar注册到容器中</p>
+<pre><code>@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Import(AspectJAutoProxyRegistrar.class)  // 把AspectJAutoProxyRegistrar导入到容器中
+public @interface EnableAspectJAutoProxy {
+...... 忽略部份代码
+}
+</code></pre>
+<p>#####1、进入AspectJAutoProxyRegistrar类<br>
+   1.这个类实现了ImportBeanDefinitionRegistrar，可通过BeanDefinitionRegistry  registry手动注册组件到容器中<br>
+   2.AopConfigUtils.registerAspectJAnnotationAutoProxyCreatorIfNecessary(registry) 手动给容器注册一个AspectJAnnotationAutoProxyCreator组件</p>
+<pre><code>class AspectJAutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
+
+	/**
+	 * Register, escalate, and configure the AspectJ auto proxy creator based on the value
+	 * of the @{@link EnableAspectJAutoProxy#proxyTargetClass()} attribute on the importing
+	 * {@code @Configuration} class.
+	 */
+	@Override
+	public void registerBeanDefinitions(
+			AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+                // 给容器注册一个AspectJAnnotationAutoProxyCreator类
+		AopConfigUtils.registerAspectJAnnotationAutoProxyCreatorIfNecessary(registry);
+         ...... 忽略部份代码
+}
+
+</code></pre>
+<p>#####2、进入上面的registerAspectJAnnotationAutoProxyCreatorIfNecessary()方法，这个方法最终包装到registerOrEscalateApcAsRequired()方法来处理<br>
+   1.注册一个beanName(bean的id)为internalAutoProxyCreator的AnnotationAwareAspectJAutoProxyCreator类到容器中</p>
+<pre><code>@Nullable
+	private static BeanDefinition registerOrEscalateApcAsRequired(
+			Class&lt;?&gt; cls, BeanDefinitionRegistry registry, @Nullable Object source) {
+          ......忽略部份代码
+		RootBeanDefinition beanDefinition = new RootBeanDefinition(cls);
+		beanDefinition.setSource(source);
+		beanDefinition.getPropertyValues().add(&quot;order&quot;, Ordered.HIGHEST_PRECEDENCE);
+		beanDefinition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+    // 传入的cls为AnnotationAwareAspectJAutoProxyCreator.class
+ // public static final String AUTO_PROXY_CREATOR_BEAN_NAME =&quot;org.springframework.aop.config.internalAutoProxyCreator&quot;;
+        // 注册一个beanName(bean的id)为internalAutoProxyCreator的AnnotationAwareAspectJAutoProxyCreator类到容器中
+		registry.registerBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME, beanDefinition);
+		return beanDefinition;
+	}
+</code></pre>
+<p>#####3、最终将AnnotationAwareAspectJAutoProxyCreator类的定义信息注册到容器中(beanDefinitionMap(Map集合)中)，这个类是后置处理器的实现类(后置处理器会在bean初始化前后做一些处理)。<br>
+#####4、之前讲spring启动原理的时候提到过后置处理器的实现会在刷新容器的时候会调用registerBeanPostProcessors(beanFactory)，找出这些后置处理器定义信息调用getBean方法(上面已经讲过bean的创建流程)进行Bean创建并初始化注册到容器中然后(保存到容器的beanPostProcessors(Map集合)中)</p>
+<pre><code>public static void registerBeanPostProcessors(
+			ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
+
+		......忽略部份代码
+          //    AnnotationAwareAspectJAutoProxyCreator的父类实现了Ordered接口，所以处理的逻辑在这里注册
+		// Next, register the BeanPostProcessors that implement Ordered.
+                // 注册实现了Ordered接口的BeanPostProcessor
+		List&lt;BeanPostProcessor&gt; orderedPostProcessors = new ArrayList&lt;&gt;();
+		for (String ppName : orderedPostProcessorNames) {
+                        // 通过getBean创建并初始化Bean对象
+			BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
+			orderedPostProcessors.add(pp);
+			if (pp instanceof MergedBeanDefinitionPostProcessor) {
+				internalPostProcessors.add(pp);
+			}
+		}
+		sortPostProcessors(orderedPostProcessors, beanFactory);
+             //   然后保存到容器的beanPostProcessors的位置中
+		registerBeanPostProcessors(beanFactory, orderedPostProcessors);
+	......忽略部份代码
+	}
+</code></pre>
+<p><strong>到这里AnnotationAwareAspectJAutoProxyCreator就创建完成了，它属于InstantiationAwareBeanPostProcessor类型的BeanPostProcessor</strong></p>
+<p>#####spring aop注解使用AOP功能只需要编写一个切面类@Aspect，然后指定@Pointcut需要代理的包范围，再编写 @Before等通知方法，例如下面代码</p>
+<pre><code> */
+@Component
+@Aspect
+public class MyAspectJ {
+    //抽取公共的切入点表达式
+    //1、本类引用
+    //2、其他的切面引用
+    @Pointcut(&quot;execution(public * com.example.demo.aop..*.*(..))&quot;)
+    public void pointCut(){};
+
+    //@Before在目标方法之前切入；切入点表达式（指定在哪个方法切入）
+    @Before(&quot;pointCut()&quot;)
+    public void before(JoinPoint joinPoint){
+        Object[] args = joinPoint.getArgs();
+        System.out.println(&quot;&quot;+joinPoint.getSignature().getName()+&quot;运行。。。@Before:参数列表是：{&quot;+ Arrays.asList(args)+&quot;}&quot;);
+    }
+
+    @After(&quot;pointCut()&quot;)
+    public void after(JoinPoint joinPoint){
+        System.out.println(&quot;&quot;+joinPoint.getSignature().getName()+&quot;结束。。。@After&quot;);
+    }
+
+    //JoinPoint一定要出现在参数表的第一位
+    @AfterReturning(value=&quot;pointCut()&quot;,returning=&quot;result&quot;)
+    public void afterReturning(JoinPoint joinPoint,Object result){
+        System.out.println(&quot;&quot;+joinPoint.getSignature().getName()+&quot;正常返回。。。@AfterReturning:运行结果：{&quot;+result+&quot;}&quot;);
+    }
+
+    @AfterThrowing(value=&quot;pointCut()&quot;,throwing=&quot;exception&quot;)
+    public void afterThrowing(JoinPoint joinPoint,Exception exception){
+        System.out.println(&quot;&quot;+joinPoint.getSignature().getName()+&quot;异常。。。异常信息：{&quot;+exception+&quot;}&quot;);
+    }
+}
+</code></pre>
+<p>// 需要增强的目标方法类(这个类必须在com.example.demo.aop下)</p>
+<pre><code>// vp需要增强的目标方法
+package com.example.demo.aop;
+@Component
+public class MyAopBean {
+    public int vp(){
+        System.out.println(&quot;运行vp方法&quot;);
+        return 1;
+    }
+}
+</code></pre>
+<p>####这里主要分析切面类(MyAspectJ)和需要增强的目标方法类(MyAopBean)的创建实例对象的过程</p>
+<p>#MyAspectJ创建实例对象过程<br>
+MyAspectJ的实例化过程与上面分析的单实例Bean实例过程一致，不同的是开启AOP切面类(MyAspectJ)在<br>
+6.1、调用Object bean = resolveBeforeInstantiation(beanName, mbdToUse)会执行<br>
+AbstractAutoProxyCreator.postProcessBeforeInstantiation()，把MyAspectJ切面类增加到advisedBeans(this.advisedBeans.put(cacheKey, Boolean.FALSE))</p>
+<pre><code>@Nullable
+	protected Object resolveBeforeInstantiation(String beanName, RootBeanDefinition mbd) {
+		Object bean = null;
+	......
+// 因为AOP的AnnotationAwareAspectJAutoProxyCreator属于InstantiationAwareBeanPostProcessor类型的后置处理器
+//所以会进行applyBeanPostProcessorsBeforeInstantiation(targetType, beanName)方法
+			if (!mbd.isSynthetic() &amp;&amp; hasInstantiationAwareBeanPostProcessors()) {
+				Class&lt;?&gt; targetType = determineTargetType(beanName, mbd);
+				if (targetType != null) {
+					bean = applyBeanPostProcessorsBeforeInstantiation(targetType, beanName);
+					if (bean != null) {
+						bean = applyBeanPostProcessorsAfterInitialization(bean, beanName);
+					}
+	......
+	}
+</code></pre>
+<p>applyBeanPostProcessorsBeforeInstantiation(targetType, beanName)方法的ibp.postProcessBeforeInstantiation(beanClass, beanName)执行的就是AbstractAutoProxyCreator.postProcessBeforeInstantiation()</p>
+<pre><code>@Override
+	public Object postProcessBeforeInstantiation(Class&lt;?&gt; beanClass, String beanName) {
+		Object cacheKey = getCacheKey(beanClass, beanName);
+
+		if (!StringUtils.hasLength(beanName) || !this.targetSourcedBeans.contains(beanName)) {
+			if (this.advisedBeans.containsKey(cacheKey)) {
+				return null;
+			}
+// isInfrastructureClass(beanClass)会判断当前bean是否是基础类型的Advice、Pointcut、Advisor、AopInfrastructureBean或者是否是切面(@Aspect)
+//如果是就会把bean添加到advisedBeans集合中
+// 因为MyAspectJ属于@Aspect，所以会被添加到advisedBeans中
+			if (isInfrastructureClass(beanClass) || shouldSkip(beanClass, beanName)) {
+				this.advisedBeans.put(cacheKey, Boolean.FALSE);
+				return null;
+			}
+		}
+		......
+
+		return null;
+	}
+</code></pre>
+<p>#####切面类实例化的其他步骤与普通Bean的流程一样</p>
+<h2 id="切面类myaspectj的实例化过程不同点在于执行到了object-bean-resolvebeforeinstantiationbeanname-mbdtouse时该bean会被保存到advisedbeans中保存了aop的增强信息后面的目标方法创建代理对象需要到这里找到增强的通知方法">#####切面类(MyAspectJ)的实例化过程不同点在于执行到了Object bean = resolveBeforeInstantiation(beanName, mbdToUse)时该Bean会被保存到advisedBeans中(保存了AOP的增强信息，后面的目标方法创建代理对象需要到这里找到增强的通知方法)</h2>
+<p>#目标方法类(MyAopBean)的创建过程<br>
+在6.3.4.4调用initializeBean(beanName, exposedObject, mbd)的applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName)执行后置处理器的后置方法时，会执行<br>
+AbstractAutoProxyCreator.postProcessAfterInitialization()方法</p>
+<pre><code>	@Override
+	public Object postProcessAfterInitialization(@Nullable Object bean, String beanName) {
+		if (bean != null) {
+			Object cacheKey = getCacheKey(bean.getClass(), beanName);
+			if (this.earlyProxyReferences.remove(cacheKey) != bean) {
+                        // 如果需要就进行包装，这个方法处理创建代理对象流程
+				return wrapIfNecessary(bean, beanName, cacheKey);
+			}
+		}
+		return bean;
+	}
+</code></pre>
+<p>进入wrapIfNecessary(bean, beanName, cacheKey)方法</p>
+<pre><code>protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
+		if (StringUtils.hasLength(beanName) &amp;&amp; this.targetSourcedBeans.contains(beanName)) {
+			return bean;
+		}
+		if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
+			return bean;
+		}
+		if (isInfrastructureClass(bean.getClass()) || shouldSkip(bean.getClass(), beanName)) {
+			this.advisedBeans.put(cacheKey, Boolean.FALSE);
+			return bean;
+		}
+
+		// 如果有当前Bean所要的增强(通知方法)，就创建代理对象。我们在MyAspectJ切面类上定义了4个增强方法(通知方法)，这里会get到，看下图
+		Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
+		// 如果获取到通知方法，就创建代理对象
+                if (specificInterceptors != DO_NOT_PROXY) {
+                   // 把当前目标方法类放入advisedBeans中，true表示做了增强处理
+			this.advisedBeans.put(cacheKey, Boolean.TRUE);
+                  // 开始创建代理对象
+                  // spring会自动决定使用JdkDynamicAopProxy(config) jdk动态代理
+                  //或者ObjenesisCglibAopProxy(config) cglib的动态代理来创建
+			Object proxy = createProxy(
+					bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
+			this.proxyTypes.put(cacheKey, proxy.getClass());
+                      // 返回代理对象
+			return proxy;
+		}
+
+		this.advisedBeans.put(cacheKey, Boolean.FALSE);
+		return bean;
+	}
+</code></pre>
+<p>1 2 3 4是我们自己定义切面类(MyAspectJ)上的增强方法<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-2.jpg" alt="getAdvicesAndAdvisorsForBean获取到的通知方法" loading="lazy"></p>
+<p>#####目标方法类(MyAopBean)的创建过程在6.3.4.4调用initializeBean(beanName, exposedObject, mbd)的applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName)执行后置处理器的后置方法时，会执行AbstractAutoProxyCreator.postProcessAfterInitialization()方法创建代理对象并返回。<br>
+这里就把目标类的Bean(代理对象)创建好了，以后获取这个Bean时都是获取代理对象。</p>
+<hr>
+<p>#MyAopBean创建好后，分析目标方法vp()是如何执行的(是通过责任链模式调用来执行的)<br>
+把断点打到了vp()方法，Step into进入了<br>
+org.springframework.aop.framework.CglibAopProxy.DynamicAdvisedInterceptor#intercept<br>
+说明这个intercept拦截目标方法的执行，做了一些处理</p>
+<pre><code>public Object intercept(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+			......
+				List&lt;Object&gt; chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
+				Object retVal;
+				// 如果没有增强方法，就执行这里(这里是通过反射直接调用目标方法)
+				if (chain.isEmpty() &amp;&amp; Modifier.isPublic(method.getModifiers())) {
+					Object[] argsToUse = AopProxyUtils.adaptArgumentsIfNecessary(method, args);
+					retVal = methodProxy.invoke(target, argsToUse);
+				}
+				else {
+					// chain的list有增强的方法，就创建方法的代理并执行proceed()
+					retVal = new CglibMethodInvocation(proxy, target, method, args, targetClass, chain, methodProxy).proceed();
+				}
+				retVal = processReturnType(proxy, target, method, retVal);
+				return retVal;
+			}
+			finally {
+				if (target != null &amp;&amp; !targetSource.isStatic()) {
+					targetSource.releaseTarget(target);
+				}
+				if (setProxyContext) {
+					// Restore old proxy.
+					AopContext.setCurrentProxy(oldProxy);
+				}
+			}
+		}
+</code></pre>
+<p>#####1.调用List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass)获取将要执行的目标方法拦截器链(就是增强方法(通知))<br>
+  1.1)获取并遍历所有的Advisor(增强器),将其转为Interceptor并返回。<br>
+这里获取到5个增强，一个默认的ExposeInvocationInterceptor 和 4个自定义的aop通知，如下图<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-3.jpg" alt="image.png" loading="lazy"><br>
+#####2.获取到拦截器链后调用retVal = new CglibMethodInvocation(proxy, target, method, args, targetClass, chain, methodProxy).proceed();创建CglibMethodInvocation对象并调用proceed()触发拦截器链(org.springframework.aop.framework.ReflectiveMethodInvocation#proceed)<br>
+#####3.分析proceed方法的执行</p>
+<pre><code>public Object proceed() throws Throwable {
+		//  currentInterceptorIndex 默认为-1，每执行一次proceed()都会+1，没有拦截器(通知方法)或者执行最后一个拦截器执行proceed()方法时，都会执行目标方法
+        //this.interceptorsAndDynamicMethodMatchers是一个list集合，存储了上面获取到的5个拦截器(通知方法)
+		if (this.currentInterceptorIndex == this.interceptorsAndDynamicMethodMatchers.size() - 1) {
+                        // invokeJoinpoint是执行目标方法
+			return invokeJoinpoint();
+		}
+           // 获取++this.currentInterceptorIndex坐标的拦截器
+		Object interceptorOrInterceptionAdvice =
+				this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
+		}
+            ......忽略部份代码
+		else {
+			// It's an interceptor, so we just invoke it: The pointcut will have
+			// been evaluated statically before this object was constructed.
+			return ((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this);
+		}
+	}
+</code></pre>
+<p>  3.1)第一次进入proceed方法，currentInterceptorIndex为-1，this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);获取坐标为0的通知方法(ExposeInvocationInterceptor  默认的增强器)<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-4.jpg" alt="第一次调用proceed" loading="lazy"><br>
+  3.2)然后走到((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this)，将增强器转成MethodInterceptor执行invoke(this)，执行的是ExposeInvocationInterceptor.invoke()，发现调用的还是mi.proceed()方法(上面传参是this，所以这方法还是ReflectiveMethodInvocation#proceed)<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-5.jpg" alt="ExposeInvocationInterceptor.invoke()" loading="lazy"><br>
+  3.3)又回到ReflectiveMethodInvocation#proceed方法，此时currentInterceptorIndex为0，不等于(5-1)，会继续执行this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);获取坐标为<strong>1</strong>的通知方法(AspectJAfterThrowingAdvice(异常通知 @AfterThrowing))<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-6.jpg" alt="第二次调用proceed" loading="lazy"><br>
+  3.4)然后又走到((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this)，这次执行的是异常通知的invoke，AspectJAfterThrowingAdvice#invoke()，它又会执行mi.proceed()<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-7.jpg" alt="AspectJAfterThrowingAdvice.invoke" loading="lazy"><br>
+  3.5)AspectJAfterThrowingAdvice#invoke()调用mi.proceed()回到ReflectiveMethodInvocation#proceed方法此时currentInterceptorIndex为1，不等于(5-1)，会继续执行this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);获取坐标为2的通知方法(AfterReturningAdviceInterceptor (返回通知 @AfterReturning 目标方法正常返回之后调用))<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-8.jpg" alt="第三次调用proceed" loading="lazy"><br>
+  3.6)然后又走到((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this)，这次执行的是返回通知的invoke，AfterReturningAdviceInterceptor#invoke，它又会先执行mi.proceed()<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-9.jpg" alt="AfterReturningAdviceInterceptor.invoke" loading="lazy"><br>
+3.7)AfterReturningAdviceInterceptor#invoke()调用mi.proceed()回到ReflectiveMethodInvocation#proceed方法此时currentInterceptorIndex为2，不等于(5-1)，会继续执行this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);获取坐标为3的通知方法(AspectJAfterAdvice(后置通知 @After 在目标方法运行结束之后运行之后调用，不管是否有异常))<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-10.jpg" alt="第四次调用proceed" loading="lazy"><br>
+3.8)然后又走到((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this)，这次执行的是后置通知的invoke，AspectJAfterAdvice#invoke，它又会先执行mi.proceed()<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-11.jpg" alt="AspectJAfterAdvice.invoke" loading="lazy"><br>
+3.9)AspectJAfterAdvice#invoke()调用mi.proceed()回到ReflectiveMethodInvocation#proceed方法此时currentInterceptorIndex为3，不等于(5-1)，会继续执行this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);获取坐标为4的通知方法(MethodBeforAdivceInterceptor(前置通知 @Before 在目标方法运行之前调用))<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-12.jpg" alt="advice.before" loading="lazy"><br>
+3.10)然后又走到((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this)，这次执行的是前置通知的invoke，MethodBeforeAdviceInterceptor#invoke，它会先调用this.advice.before(mi.getMethod(), mi.getArguments(), mi.getThis())执行前置通知的方法(@Before)<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-13.jpg" alt="MethodBeforAdivceInterceptor#invoke" loading="lazy"><br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-14.jpg" alt="前置通知" loading="lazy"><br>
+3.11)执行完前置通知的方法后，会再次调用mi.proceed()，此时currentInterceptorIndex为4，等于(5-1)，所以会执行invokeJoinpoint()(这个方法就是执行目标方法的，通过this.methodProxy.invoke(this.target, this.arguments))<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-15.jpg" alt="第五次调用proceed" loading="lazy"><br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-16.jpg" alt="目标方法(打印出运行vp方法)" loading="lazy"><br>
+3.12)执行完ruturn invokeJoinpoint()(目标方法之后)，MethodBeforeAdviceInterceptor.invoke()就return了,然后回到调用AspectJAfterAdvice.invoke((回到上一级调用MethodBeforeAdviceInterceptor的方法))，这时会调用invokeAdviceMethod(getJoinPointMatch(), null, null)，执行后置方法(不管是否目标方法有异常都会执行到)<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-17.jpg" alt="AspectJAfterAdvice.invoke" loading="lazy"><br>
+<img src="C:/Users/PC/Pictures/Saved%20Pictures/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-18.jpg" alt="image.png" loading="lazy"></p>
+<p>3.13)执行完AspectJAfterAdvice.invoke()之后，这时目标方法抛出异常了(int i = 1/0;)，AfterReturningAdviceInterceptor#invoke就不会执行this.advice.afterReturning(retVal, mi.getMethod(), mi.getArguments(), mi.getThis())了(如果正常返回就会执行this.advice.afterReturning来调用返回通知)，它会把异常抛给上一层(AspectJAfterThrowingAdvice)，这时回到<br>
+AspectJAfterThrowingAdvice#invoke(回到上一级调用AfterReturning的方法)，会调用invokeAdviceMethod(getJoinPointMatch(), null, ex);执行异常通知方法，然后throw ex抛出异常给上一层(ExposeInvocationInterceptor)<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-19.jpg" alt="image.png" loading="lazy"><br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-20.jpg" alt="异常通知" loading="lazy"><br>
+3.14)执行完异常通知方法，会回到最早的ExposeInvocationInterceptor增强器方法中，执行完finally之后，就会抛出异常给jvm<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-21.jpg" alt="image.png" loading="lazy"><br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-22.jpg" alt="image.png" loading="lazy"><br>
+#####AOP目标方法执行原理分析完毕，使用链式调用，从坐标为0的增强器一直调到最后一个增强器，然后最后一个增强器执行完后，返回上一个增强器继续执行操作...直到返回到第一个增强器执行完成，增强了的目标方法就执行完成<br>
+#####目标方法(MyAopBean.vp)执行的流程图<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-23.jpg" alt="image.png" loading="lazy"></p>
+<p>AOP启动总结：<br>
+spring容器启动时调用refresh()刷新容器(具体spring容器启动的流程请看<a href="https://www.jianshu.com/writer#/notebooks/31229867/notes/54723874/preview">https://www.jianshu.com/writer#/notebooks/31229867/notes/54723874/preview</a><br>
+)</p>
+<ul>
+<li><strong>refresh()# invokeBeanFactoryPostProcessors(beanFactory)，会将spring能感知到的(加了注解的)所有Bean的定义信息保存到容器中。（AnnotationAwareAspectJAutoProxyCreator、MyAspectJ、MyAopBean的定义信息都是这时候注册到容器的）</strong></li>
+<li><strong>refresh()# registerBeanPostProcessors(beanFactory)会创建并初始化后置处理器并注册到容器中，因为AnnotationAwareAspectJAutoProxyCreator属于InstantiationAwareBeanPostProcessor类型的后置处理器，所以在这时会创建AnnotationAwareAspectJAutoProxyCreator的实例注册到容器中</strong></li>
+<li><strong>refresh()# finishBeanFactoryInitialization(beanFactory) 会初始化(创建Bean的实例)所有剩下的单实例Bean，MyAspectJ类和MyAopBean类在这时会创建Bean实例并保存到容器中</strong></li>
+</ul>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/spring-chang-yong-zhu-jie-zuo-yong-yu-chang-yong-jie-kou-yu-hou-zhi-chu-li-qi/">
+              <h3 class="post-title">
+                下一篇：spring常用注解作用与常用接口与后置处理器
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

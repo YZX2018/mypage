@@ -1,0 +1,551 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>mysql8.0主从复制和mycat实现分表分库，读写分离 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">mysql8.0主从复制和mycat实现分表分库，读写分离</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2018-12-09</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <hr>
+<hr>
+<pre><code>#mysql8.0主从复制
+</code></pre>
+<p><a href="https://www.jianshu.com/p/af1690d8d045">https://www.jianshu.com/p/af1690d8d045</a><br>
+读写分离需要借助主从复制，因为如果不需要分表的数据，就需要将主DB的数据复制到从机上(也可以通过mycat设置成全局表)<br>
+通过mycat来控制权限，主机有读和写操作的权限，从机只有读操作权限</p>
+<p>数据库分表分库，读写分离的出现，主要是数据库性能瓶颈<br>
+#影响数据库性能的主要原因:<br>
+1.单表数据量太大<br>
+2.并发时的数据库连接数过大，单台数据库节点支撑不了<br>
+3.硬件资源(QPS/TPS)</p>
+<p>#水平分表和垂直分库<br>
+以上1 2 原因影响数据库性能瓶颈的主要解决方法就是<strong>水平分表和垂直分库</strong><br>
+1.一般单表达到500万数据量和占2G硬盘内存时就会考虑水平分表和垂直分库，每个数据库有相同的表结构，可以通过取模算法来判断数据放到哪个数据库表中(id%数据库节点数)<br>
+2.用户访问数多时，当台数据库节点无法支撑时就会考虑业务分库和读写分离<br>
+<strong>目前主流的微服务架构就是通过业务来分库(比如user库、order库)，可以减少单台数据库访问量</strong><br>
+<strong>读写分离，通过mycat来控制，主机有读和写操作的权限，从机只有读操作权限</strong></p>
+<p>#mycat的一些概念<br>
+分表分库和读写分离需要用到mycat中间件来协助。mycat内置分表的方案(取模、时间戳等)，有全局表、分片表和ER表等概念<br>
+<strong>全局表具有以下特性</strong>：<br>
+• 全局表的插入、更新操作会实时在所有节点上执行，保持各个分片的数据一致性<br>
+• 全局表的查询操作，只从一个节点获取<br>
+• 全局表可以跟任何一个表进行 JOIN 操作<br>
+比如 用户等级表，权限表、数据字典表等可以用为全局表。所有DB节点上都需要数据一致性<br>
+<strong>这些表不设置成全局表，通过mysql主从复制来保证所有DB节点上都需要数据一致性也是可以的，mycat只做读写分离。</strong></p>
+<p><strong>分片表</strong>：<br>
+数据量过大需要分表的数据库表理解成分片表，比如用户表，订单表。这些表数据库都很大</p>
+<p><strong>ER 分片表</strong><br>
+有一类业务，例如订单（order）跟订单明细（order_detail）,明细表会依赖于订单，也就是说会存在表的主<br>
+从关系，这类似业务的切分可以抽象出合适的切分规则，比如根据用户 ID 切分,其他相关的表都依赖于用户 ID，再或者根据订单 ID 切分，总之部分业务总会可以抽象出父子关系的表。这类表适用于 ER 分片表，子表的记录与所关联的父表记录存放在同一个数据分片上，避免数据 Join 跨库操作。<br>
+比如：订单表分表分库时。001订单在A节点(数据库)上，001订单的明细表也需要在A节点上，才能作关联查询。这时订单表就是分表片，订单明细表就是子表(ER分片表)<br>
+<strong>但是ER分片表在订单表进行扩容或缩容时很难进行迁移。所有一般会把ER分片表也设置成分片表，通过订单明细关联的订单号来进行分片(意思是订单明细表的分片字段就是订单表的分片字段(订单明细表的外键))</strong></p>
+<p>mycat的概念在mycat官方文档有说明<br>
+<a href="http://www.mycat.io/document/mycat-definitive-guide.pdf">http://www.mycat.io/document/mycat-definitive-guide.pdf</a></p>
+<p>#centos7搭建mycat并实现分表分库和读写分离<br>
+mycat安装（linux版本）前的准备：<br>
+<strong>需要先安装jdk，和mysql，我用的jdk1.8和mysql8.0</strong><br>
+<strong>实现分表分库和读写分离的示例场景</strong>：<br>
+1.有两台mysql服务器，搭建一主一从的主从复制(只复制db_store库)。搭建的操作在文章最开头的链接。<br>
+2.搭建好主从复制后，在主节点上创建两个db_store(配置了主从复制的库)和db_user数据库，并在db_store库创建store表(这个表通过主从复制来同步节点的数据，mycat对这个表只作读写分离作用)。<br>
+在db_user库创建data_dictionary(全局表)、user_address(ER分片表)、和users(分片表)<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/mysql8.0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%92%8Cmycat%E5%AE%9E%E7%8E%B0%E5%88%86%E8%A1%A8%E5%88%86%E5%BA%93-1.jpg" alt="image.png" loading="lazy"><br>
+<strong>准备工作完成，开始搭建mycat</strong><br>
+<a href="http://www.mycat.io/">http://www.mycat.io/</a>下载mycat1.6.7.1-release版本<br>
+解压mycat<br>
+tar -zxvf Mycat-server-1.6.7.1-release-20190627191042-linux.tar.gz<br>
+<strong>主要修改mycat的bin目录下的三个配置文件，配置文件的参数解析看mycat的文档，本文中有链接</strong><br>
+第一个：schema.xml</p>
+<pre><code>&lt;?xml version=&quot;1.0&quot;?&gt;
+&lt;!DOCTYPE mycat:schema SYSTEM &quot;schema.dtd&quot;&gt;
+&lt;mycat:schema xmlns:mycat=&quot;http://io.mycat/&quot;&gt;
+  &lt;!-- schema 配置mycat的逻辑库，与真实库对应 --&gt;
+	&lt;schema name=&quot;db_store&quot; checkSQLschema=&quot;false&quot; sqlMaxLimit=&quot;100&quot;&gt;
+		&lt;table name=&quot;store&quot; dataNode=&quot;db_store_dataNode&quot; primaryKey=&quot;storeID&quot;/&gt;
+	&lt;/schema&gt;
+	
+	&lt;schema name=&quot;db_user&quot; checkSQLschema=&quot;false&quot; sqlMaxLimit=&quot;100&quot;&gt;
+		&lt;table name=&quot;data_dictionary&quot; type=&quot;global&quot; dataNode=&quot;db_user_dataNode1,db_user_dataNode2&quot; primaryKey=&quot;dataDictionaryID&quot;/&gt;
+		&lt;table name=&quot;users&quot; dataNode=&quot;db_user_dataNode$1-2&quot;  rule=&quot;mod-userID-long&quot; primaryKey=&quot;userID&quot;&gt;
+			&lt;childTable name=&quot;user_address&quot;  joinKey=&quot;userID&quot; parentKey=&quot;userID&quot; primaryKey=&quot;addressID&quot;/&gt;
+		&lt;/table&gt;
+	&lt;/schema&gt;
+	
+	&lt;!-- 节点配置 --&gt;
+	&lt;!-- db_store --&gt;
+	&lt;dataNode name=&quot;db_store_dataNode&quot; dataHost=&quot;db_storeHOST&quot; database=&quot;db_store&quot; /&gt;
+	
+	&lt;!-- db_user --&gt;
+	&lt;dataNode name=&quot;db_user_dataNode1&quot; dataHost=&quot;db_userHOST1&quot; database=&quot;db_user&quot; /&gt;
+	&lt;dataNode name=&quot;db_user_dataNode2&quot; dataHost=&quot;db_userHOST2&quot; database=&quot;db_user&quot; /&gt;
+	
+		&lt;!-- 节点主机配置、dataHost	物理数据库，真正存储数据的数据库 --&gt;
+	&lt;!-- 配置db_store的节点主机 --&gt;
+	&lt;dataHost name=&quot;db_storeHOST&quot; maxCon=&quot;1000&quot; minCon=&quot;10&quot; balance=&quot;1&quot;
+			  writeType=&quot;0&quot; dbType=&quot;mysql&quot; dbDriver=&quot;native&quot; switchType=&quot;1&quot;  slaveThreshold=&quot;100&quot;&gt;
+		&lt;heartbeat&gt;select user()&lt;/heartbeat&gt;
+		&lt;!-- can have multi write hosts --&gt;
+		&lt;writeHost host=&quot;hostM1&quot; url=&quot;192.168.79.142:3306&quot; user=&quot;root&quot;  password=&quot;123456&quot;&gt;
+			&lt;!-- can have multi read hosts --&gt;
+			&lt;readHost host=&quot;hostS1&quot; url=&quot;192.168.79.144:3306&quot; user=&quot;root&quot; password=&quot;123456&quot; /&gt;
+		&lt;/writeHost&gt;
+	&lt;/dataHost&gt;
+	
+	&lt;!-- 配置db_user的节点主机，users表需要分表分库操作，所有要配置两个dataHost--&gt;
+	&lt;dataHost name=&quot;db_userHOST1&quot; maxCon=&quot;1000&quot; minCon=&quot;10&quot; balance=&quot;0&quot;
+			  writeType=&quot;0&quot; dbType=&quot;mysql&quot; dbDriver=&quot;native&quot; switchType=&quot;1&quot;  slaveThreshold=&quot;100&quot;&gt;
+		&lt;heartbeat&gt;select user()&lt;/heartbeat&gt;
+		&lt;writeHost host=&quot;userHost1&quot; url=&quot;192.168.79.142:3306&quot; user=&quot;root&quot;  password=&quot;123456&quot;&gt;
+		&lt;/writeHost&gt;
+	&lt;/dataHost&gt;
+	
+	&lt;dataHost name=&quot;db_userHOST2&quot; maxCon=&quot;1000&quot; minCon=&quot;10&quot; balance=&quot;0&quot;
+			  writeType=&quot;0&quot; dbType=&quot;mysql&quot; dbDriver=&quot;native&quot; switchType=&quot;1&quot;  slaveThreshold=&quot;100&quot;&gt;
+		&lt;heartbeat&gt;select user()&lt;/heartbeat&gt;
+		&lt;!-- can have multi write hosts --&gt;
+		&lt;writeHost host=&quot;userHost2&quot; url=&quot;192.168.79.144:3306&quot; user=&quot;root&quot;  password=&quot;123456&quot;&gt;
+		&lt;/writeHost&gt;
+	&lt;/dataHost&gt;
+
+&lt;/mycat:schema&gt;
+</code></pre>
+<p>第二个：rule.xml<br>
+只需要增加mod-userID-long的tableRule，这个配置是给schema.xml引用的(rule=&quot;mod-userID-long&quot;)，这是定义users表的分片规则 <algorithm>mod-long</algorithm>表示通过schema.xml的primaryKey=&quot;userID&quot;这个字段来取模进行分片</p>
+<pre><code>&lt;tableRule name=&quot;mod-userID-long&quot;&gt;
+		&lt;rule&gt;
+			&lt;columns&gt;userID&lt;/columns&gt;
+			&lt;algorithm&gt;mod-long&lt;/algorithm&gt;
+		&lt;/rule&gt;
+	&lt;/tableRule&gt;
+</code></pre>
+<p>和修改<property name="count">2</property>的值为2，表示分片到两个数据库节点上。</p>
+<pre><code>&lt;function name=&quot;mod-long&quot; class=&quot;io.mycat.route.function.PartitionByMod&quot;&gt;
+		&lt;!-- how many data nodes --&gt;
+		&lt;property name=&quot;count&quot;&gt;2&lt;/property&gt;
+	&lt;/function&gt;
+</code></pre>
+<p>整个rule.xml配置(只增加一处和修改一处，其他都是默认的)</p>
+<pre><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;!DOCTYPE mycat:rule SYSTEM &quot;rule.dtd&quot;&gt;
+&lt;mycat:rule xmlns:mycat=&quot;http://io.mycat/&quot;&gt;
+	&lt;tableRule name=&quot;rule1&quot;&gt;
+		&lt;rule&gt;
+			&lt;columns&gt;id&lt;/columns&gt;
+			&lt;algorithm&gt;func1&lt;/algorithm&gt;
+		&lt;/rule&gt;
+	&lt;/tableRule&gt;
+
+	&lt;tableRule name=&quot;rule2&quot;&gt;
+		&lt;rule&gt;
+			&lt;columns&gt;user_id&lt;/columns&gt;
+			&lt;algorithm&gt;func1&lt;/algorithm&gt;
+		&lt;/rule&gt;
+	&lt;/tableRule&gt;
+
+	&lt;tableRule name=&quot;sharding-by-intfile&quot;&gt;
+		&lt;rule&gt;
+			&lt;columns&gt;sharding_id&lt;/columns&gt;
+			&lt;algorithm&gt;hash-int&lt;/algorithm&gt;
+		&lt;/rule&gt;
+	&lt;/tableRule&gt;
+	&lt;tableRule name=&quot;auto-sharding-long&quot;&gt;
+		&lt;rule&gt;
+			&lt;columns&gt;id&lt;/columns&gt;
+			&lt;algorithm&gt;rang-long&lt;/algorithm&gt;
+		&lt;/rule&gt;
+	&lt;/tableRule&gt;
+	&lt;tableRule name=&quot;mod-long&quot;&gt;
+		&lt;rule&gt;
+			&lt;columns&gt;id&lt;/columns&gt;
+			&lt;algorithm&gt;mod-long&lt;/algorithm&gt;
+		&lt;/rule&gt;
+	&lt;/tableRule&gt;
+	
+	&lt;tableRule name=&quot;mod-userID-long&quot;&gt;
+		&lt;rule&gt;
+			&lt;columns&gt;userID&lt;/columns&gt;
+			&lt;algorithm&gt;mod-long&lt;/algorithm&gt;
+		&lt;/rule&gt;
+	&lt;/tableRule&gt;
+	
+	&lt;tableRule name=&quot;sharding-by-murmur&quot;&gt;
+		&lt;rule&gt;
+			&lt;columns&gt;id&lt;/columns&gt;
+			&lt;algorithm&gt;murmur&lt;/algorithm&gt;
+		&lt;/rule&gt;
+	&lt;/tableRule&gt;
+	&lt;tableRule name=&quot;crc32slot&quot;&gt;
+		&lt;rule&gt;
+			&lt;columns&gt;id&lt;/columns&gt;
+			&lt;algorithm&gt;crc32slot&lt;/algorithm&gt;
+		&lt;/rule&gt;
+	&lt;/tableRule&gt;
+	&lt;tableRule name=&quot;sharding-by-month&quot;&gt;
+		&lt;rule&gt;
+			&lt;columns&gt;create_time&lt;/columns&gt;
+			&lt;algorithm&gt;partbymonth&lt;/algorithm&gt;
+		&lt;/rule&gt;
+	&lt;/tableRule&gt;
+	&lt;tableRule name=&quot;latest-month-calldate&quot;&gt;
+		&lt;rule&gt;
+			&lt;columns&gt;calldate&lt;/columns&gt;
+			&lt;algorithm&gt;latestMonth&lt;/algorithm&gt;
+		&lt;/rule&gt;
+	&lt;/tableRule&gt;
+	
+	&lt;tableRule name=&quot;auto-sharding-rang-mod&quot;&gt;
+		&lt;rule&gt;
+			&lt;columns&gt;id&lt;/columns&gt;
+			&lt;algorithm&gt;rang-mod&lt;/algorithm&gt;
+		&lt;/rule&gt;
+	&lt;/tableRule&gt;
+	
+	&lt;tableRule name=&quot;jch&quot;&gt;
+		&lt;rule&gt;
+			&lt;columns&gt;id&lt;/columns&gt;
+			&lt;algorithm&gt;jump-consistent-hash&lt;/algorithm&gt;
+		&lt;/rule&gt;
+	&lt;/tableRule&gt;
+
+	&lt;function name=&quot;murmur&quot;
+		class=&quot;io.mycat.route.function.PartitionByMurmurHash&quot;&gt;
+		&lt;property name=&quot;seed&quot;&gt;0&lt;/property&gt;&lt;!-- 默认是0 --&gt;
+		&lt;property name=&quot;count&quot;&gt;2&lt;/property&gt;&lt;!-- 要分片的数据库节点数量，必须指定，否则没法分片 --&gt;
+		&lt;property name=&quot;virtualBucketTimes&quot;&gt;160&lt;/property&gt;&lt;!-- 一个实际的数据库节点被映射为这么多虚拟节点，默认是160倍，也就是虚拟节点数是物理节点数的160倍 --&gt;
+		&lt;!-- &lt;property name=&quot;weightMapFile&quot;&gt;weightMapFile&lt;/property&gt; 节点的权重，没有指定权重的节点默认是1。以properties文件的格式填写，以从0开始到count-1的整数值也就是节点索引为key，以节点权重值为值。所有权重值必须是正整数，否则以1代替 --&gt;
+		&lt;!-- &lt;property name=&quot;bucketMapPath&quot;&gt;/etc/mycat/bucketMapPath&lt;/property&gt; 
+			用于测试时观察各物理节点与虚拟节点的分布情况，如果指定了这个属性，会把虚拟节点的murmur hash值与物理节点的映射按行输出到这个文件，没有默认值，如果不指定，就不会输出任何东西 --&gt;
+	&lt;/function&gt;
+
+	&lt;function name=&quot;crc32slot&quot;
+			  class=&quot;io.mycat.route.function.PartitionByCRC32PreSlot&quot;&gt;
+	&lt;/function&gt;
+	&lt;function name=&quot;hash-int&quot;
+		class=&quot;io.mycat.route.function.PartitionByFileMap&quot;&gt;
+		&lt;property name=&quot;mapFile&quot;&gt;partition-hash-int.txt&lt;/property&gt;
+	&lt;/function&gt;
+	&lt;function name=&quot;rang-long&quot;
+		class=&quot;io.mycat.route.function.AutoPartitionByLong&quot;&gt;
+		&lt;property name=&quot;mapFile&quot;&gt;autopartition-long.txt&lt;/property&gt;
+	&lt;/function&gt;
+	&lt;function name=&quot;mod-long&quot; class=&quot;io.mycat.route.function.PartitionByMod&quot;&gt;
+		&lt;!-- how many data nodes --&gt;
+		&lt;property name=&quot;count&quot;&gt;2&lt;/property&gt;
+	&lt;/function&gt;
+
+
+	&lt;function name=&quot;func1&quot; class=&quot;io.mycat.route.function.PartitionByLong&quot;&gt;
+		&lt;property name=&quot;partitionCount&quot;&gt;8&lt;/property&gt;
+		&lt;property name=&quot;partitionLength&quot;&gt;128&lt;/property&gt;
+	&lt;/function&gt;
+	&lt;function name=&quot;latestMonth&quot;
+		class=&quot;io.mycat.route.function.LatestMonthPartion&quot;&gt;
+		&lt;property name=&quot;splitOneDay&quot;&gt;24&lt;/property&gt;
+	&lt;/function&gt;
+	&lt;function name=&quot;partbymonth&quot;
+		class=&quot;io.mycat.route.function.PartitionByMonth&quot;&gt;
+		&lt;property name=&quot;dateFormat&quot;&gt;yyyy-MM-dd&lt;/property&gt;
+		&lt;property name=&quot;sBeginDate&quot;&gt;2015-01-01&lt;/property&gt;
+	&lt;/function&gt;
+	
+	&lt;function name=&quot;rang-mod&quot; class=&quot;io.mycat.route.function.PartitionByRangeMod&quot;&gt;
+        	&lt;property name=&quot;mapFile&quot;&gt;partition-range-mod.txt&lt;/property&gt;
+	&lt;/function&gt;
+	
+	&lt;function name=&quot;jump-consistent-hash&quot; class=&quot;io.mycat.route.function.PartitionByJumpConsistentHash&quot;&gt;
+		&lt;property name=&quot;totalBuckets&quot;&gt;3&lt;/property&gt;
+	&lt;/function&gt;
+&lt;/mycat:rule&gt;
+</code></pre>
+<p>第三个:server.xml<br>
+设置mycat的登陆账号root和密码123456。mycat逻辑库db_store,db_user</p>
+<pre><code>   &lt;user name=&quot;root&quot; defaultAccount=&quot;true&quot;&gt;
+        &lt;property name=&quot;password&quot;&gt;123456&lt;/property&gt;
+        &lt;property name=&quot;schemas&quot;&gt;db_store,db_user&lt;/property&gt;
+</code></pre>
+<p>整个server.xml配置文件参考</p>
+<pre><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;!DOCTYPE mycat:server SYSTEM &quot;server.dtd&quot;&gt;
+&lt;mycat:server xmlns:mycat=&quot;http://io.mycat/&quot;&gt;
+	&lt;system&gt;
+	&lt;property name=&quot;nonePasswordLogin&quot;&gt;0&lt;/property&gt; &lt;!-- 0为需要密码登陆、1为不需要密码登陆 ,默认为0，设置为1则需要指定默认账户--&gt;
+	&lt;property name=&quot;useHandshakeV10&quot;&gt;1&lt;/property&gt;
+	&lt;property name=&quot;useSqlStat&quot;&gt;0&lt;/property&gt;  &lt;!-- 1为开启实时统计、0为关闭 --&gt;
+	&lt;property name=&quot;useGlobleTableCheck&quot;&gt;0&lt;/property&gt;  &lt;!-- 1为开启全加班一致性检测、0为关闭 --&gt;
+
+		&lt;property name=&quot;sequnceHandlerType&quot;&gt;2&lt;/property&gt;
+		&lt;!--&lt;property name=&quot;sequnceHandlerPattern&quot;&gt;(?:(\s*next\s+value\s+for\s*MYCATSEQ_(\w+))(,|\)|\s)*)+&lt;/property&gt;--&gt;
+		&lt;!--必须带有MYCATSEQ_或者 mycatseq_进入序列匹配流程 注意MYCATSEQ_有空格的情况--&gt;
+		&lt;property name=&quot;sequnceHandlerPattern&quot;&gt;(?:(\s*next\s+value\s+for\s*MYCATSEQ_(\w+))(,|\)|\s)*)+&lt;/property&gt;
+	&lt;property name=&quot;subqueryRelationshipCheck&quot;&gt;false&lt;/property&gt; &lt;!-- 子查询中存在关联查询的情况下,检查关联字段中是否有分片字段 .默认 false --&gt;
+      &lt;!--  &lt;property name=&quot;useCompression&quot;&gt;1&lt;/property&gt;--&gt; &lt;!--1为开启mysql压缩协议--&gt;
+        &lt;!--  &lt;property name=&quot;fakeMySQLVersion&quot;&gt;5.6.20&lt;/property&gt;--&gt; &lt;!--设置模拟的MySQL版本号--&gt;
+	&lt;!-- &lt;property name=&quot;processorBufferChunk&quot;&gt;40960&lt;/property&gt; --&gt;
+	&lt;!-- 
+	&lt;property name=&quot;processors&quot;&gt;1&lt;/property&gt; 
+	&lt;property name=&quot;processorExecutor&quot;&gt;32&lt;/property&gt; 
+	 --&gt;
+        &lt;!--默认为type 0: DirectByteBufferPool | type 1 ByteBufferArena | type 2 NettyBufferPool --&gt;
+		&lt;property name=&quot;processorBufferPoolType&quot;&gt;0&lt;/property&gt;
+		&lt;!--默认是65535 64K 用于sql解析时最大文本长度 --&gt;
+		&lt;!--&lt;property name=&quot;maxStringLiteralLength&quot;&gt;65535&lt;/property&gt;--&gt;
+		&lt;!--&lt;property name=&quot;sequnceHandlerType&quot;&gt;0&lt;/property&gt;--&gt;
+		&lt;!--&lt;property name=&quot;backSocketNoDelay&quot;&gt;1&lt;/property&gt;--&gt;
+		&lt;!--&lt;property name=&quot;frontSocketNoDelay&quot;&gt;1&lt;/property&gt;--&gt;
+		&lt;!--&lt;property name=&quot;processorExecutor&quot;&gt;16&lt;/property&gt;--&gt;
+		&lt;!--
+			&lt;property name=&quot;serverPort&quot;&gt;8066&lt;/property&gt; &lt;property name=&quot;managerPort&quot;&gt;9066&lt;/property&gt; 
+			&lt;property name=&quot;idleTimeout&quot;&gt;300000&lt;/property&gt; &lt;property name=&quot;bindIp&quot;&gt;0.0.0.0&lt;/property&gt; 
+			&lt;property name=&quot;frontWriteQueueSize&quot;&gt;4096&lt;/property&gt; &lt;property name=&quot;processors&quot;&gt;32&lt;/property&gt; --&gt;
+		&lt;!--分布式事务开关，0为不过滤分布式事务，1为过滤分布式事务（如果分布式事务内只涉及全局表，则不过滤），2为不过滤分布式事务,但是记录分布式事务日志--&gt;
+		&lt;property name=&quot;handleDistributedTransactions&quot;&gt;0&lt;/property&gt;
+		
+			&lt;!--
+			off heap for merge/order/group/limit      1开启   0关闭
+		--&gt;
+		&lt;property name=&quot;useOffHeapForMerge&quot;&gt;0&lt;/property&gt;
+
+		&lt;!--
+			单位为m
+		--&gt;
+        &lt;property name=&quot;memoryPageSize&quot;&gt;64k&lt;/property&gt;
+
+		&lt;!--
+			单位为k
+		--&gt;
+		&lt;property name=&quot;spillsFileBufferSize&quot;&gt;1k&lt;/property&gt;
+
+		&lt;property name=&quot;useStreamOutput&quot;&gt;0&lt;/property&gt;
+
+		&lt;!--
+			单位为m
+		--&gt;
+		&lt;property name=&quot;systemReserveMemorySize&quot;&gt;384m&lt;/property&gt;
+
+
+		&lt;!--是否采用zookeeper协调切换  --&gt;
+		&lt;property name=&quot;useZKSwitch&quot;&gt;false&lt;/property&gt;
+
+		&lt;!-- XA Recovery Log日志路径 --&gt;
+		&lt;!--&lt;property name=&quot;XARecoveryLogBaseDir&quot;&gt;./&lt;/property&gt;--&gt;
+
+		&lt;!-- XA Recovery Log日志名称 --&gt;
+		&lt;!--&lt;property name=&quot;XARecoveryLogBaseName&quot;&gt;tmlog&lt;/property&gt;--&gt;
+		&lt;!--如果为 true的话 严格遵守隔离级别,不会在仅仅只有select语句的时候在事务中切换连接--&gt;
+		&lt;property name=&quot;strictTxIsolation&quot;&gt;false&lt;/property&gt;
+		
+		&lt;property name=&quot;useZKSwitch&quot;&gt;true&lt;/property&gt;
+		
+	&lt;/system&gt;
+	
+	&lt;!-- 全局SQL防火墙设置 --&gt;
+	&lt;!--白名单可以使用通配符%或着*--&gt;
+	&lt;!--例如&lt;host host=&quot;127.0.0.*&quot; user=&quot;root&quot;/&gt;--&gt;
+	&lt;!--例如&lt;host host=&quot;127.0.*&quot; user=&quot;root&quot;/&gt;--&gt;
+	&lt;!--例如&lt;host host=&quot;127.*&quot; user=&quot;root&quot;/&gt;--&gt;
+	&lt;!--例如&lt;host host=&quot;1*7.*&quot; user=&quot;root&quot;/&gt;--&gt;
+	&lt;!--这些配置情况下对于127.0.0.1都能以root账户登录--&gt;
+	&lt;!--
+	&lt;firewall&gt;
+	   &lt;whitehost&gt;
+	      &lt;host host=&quot;1*7.0.0.*&quot; user=&quot;root&quot;/&gt;
+	   &lt;/whitehost&gt;
+       &lt;blacklist check=&quot;false&quot;&gt;
+       &lt;/blacklist&gt;
+	&lt;/firewall&gt;
+	--&gt;
+
+	&lt;user name=&quot;root&quot; defaultAccount=&quot;true&quot;&gt;
+		&lt;property name=&quot;password&quot;&gt;123456&lt;/property&gt;
+		&lt;property name=&quot;schemas&quot;&gt;db_store,db_user&lt;/property&gt;
+		
+		&lt;!-- 表级 DML 权限设置 --&gt;
+		&lt;!-- 		
+		&lt;privileges check=&quot;false&quot;&gt;
+			&lt;schema name=&quot;TESTDB&quot; dml=&quot;0110&quot; &gt;
+				&lt;table name=&quot;tb01&quot; dml=&quot;0000&quot;&gt;&lt;/table&gt;
+				&lt;table name=&quot;tb02&quot; dml=&quot;1111&quot;&gt;&lt;/table&gt;
+			&lt;/schema&gt;
+		&lt;/privileges&gt;		
+		 --&gt;
+	&lt;/user&gt;
+
+&lt;/mycat:server&gt;
+</code></pre>
+<p>配置好以上三个文件，mycat的搭建就完成了<br>
+进入mycat的bin目录启动mycat<br>
+./mycat start<br>
+进入mycat的logs目录可以查询到mycat的日志，conf目录下的log4j.xml可以设置mycat的日志级别，默认是info。如果要打印出select语句的日志，就要修改成debug</p>
+<p>通过Navicat连接mycat，mycat端口号为8066<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/mysql8.0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%92%8Cmycat%E5%AE%9E%E7%8E%B0%E5%88%86%E8%A1%A8%E5%88%86%E5%BA%93-2.jpg" alt="image.png" loading="lazy"><br>
+<strong>测试环节，所有操作都是连接在mycat库操作的，然后mycat会转发到真实数据库中</strong><br>
+<strong>1.在users表上添加5条记录，测试一下分表分库是否成功</strong><br>
+mycat users表的数据<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/mysql8.0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%92%8Cmycat%E5%AE%9E%E7%8E%B0%E5%88%86%E8%A1%A8%E5%88%86%E5%BA%93-3.jpg" alt="image.png" loading="lazy"><br>
+142数据库users表的数据<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/mysql8.0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%92%8Cmycat%E5%AE%9E%E7%8E%B0%E5%88%86%E8%A1%A8%E5%88%86%E5%BA%93-4.jpg" alt="image.png" loading="lazy"><br>
+144数据库users表的数据<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/mysql8.0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%92%8Cmycat%E5%AE%9E%E7%8E%B0%E5%88%86%E8%A1%A8%E5%88%86%E5%BA%93-5.jpg" alt="image.png" loading="lazy"><br>
+可以看到，数据分片已经成功，偶数userID在142数据库，奇数在144数据库。查询数据时，mycat会自动匹配到对应的数据库</p>
+<p><strong>测试user_address   ER表的数据是否与users表对应同一个DB节点</strong><br>
+mycat user_address表的数据<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/mysql8.0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%92%8Cmycat%E5%AE%9E%E7%8E%B0%E5%88%86%E8%A1%A8%E5%88%86%E5%BA%93-6.jpg" alt="image.png" loading="lazy"><br>
+142数据库user_address表的数据<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/mysql8.0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%92%8Cmycat%E5%AE%9E%E7%8E%B0%E5%88%86%E8%A1%A8%E5%88%86%E5%BA%93-7.jpg" alt="image.png" loading="lazy"><br>
+144数据库user_address表的数据<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/mysql8.0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%92%8Cmycat%E5%AE%9E%E7%8E%B0%E5%88%86%E8%A1%A8%E5%88%86%E5%BA%93-8.jpg" alt="image.png" loading="lazy"><br>
+以上数据与users表所有的节点数据是对应的，查询用户的地址信息就可以关联查询了，这就是ER表的作用</p>
+<p><strong>测试data_dictionary 全局表的数据是否在所有节点上都相同</strong><br>
+插入五条数据，在mycat库、142数据库、144数据库上都是相同的<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/mysql8.0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%92%8Cmycat%E5%AE%9E%E7%8E%B0%E5%88%86%E8%A1%A8%E5%88%86%E5%BA%93-9.jpg" alt="image.png" loading="lazy"></p>
+<p><code>db_user数据库只作了分片操作，没有作mycat的主从配置，当某一个节点挂了，mycat的逻辑库就连不上了</code></p>
+<p><strong>db_store数据库测试，该数据库配置了主从复制，在mycat库中添加4条数据，看看所有节点的数据是否相同</strong><br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/mysql8.0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%92%8Cmycat%E5%AE%9E%E7%8E%B0%E5%88%86%E8%A1%A8%E5%88%86%E5%BA%93-10.jpg" alt="image.png" loading="lazy"><br>
+3个数据库的数据都是相同的，这里就不一一帖出来了。主从复制配置成功。似类于全局表的功能。<br>
+在上面的schema.xml配置了读写分离</p>
+<pre><code>&lt;dataHost name=&quot;db_storeHOST&quot; maxCon=&quot;1000&quot; minCon=&quot;10&quot; balance=&quot;1&quot;
+              writeType=&quot;0&quot; dbType=&quot;mysql&quot; dbDriver=&quot;native&quot; switchType=&quot;1&quot;  slaveThreshold=&quot;100&quot;&gt;
+        &lt;heartbeat&gt;select user()&lt;/heartbeat&gt;
+        &lt;!-- can have multi write hosts --&gt;
+        &lt;writeHost host=&quot;hostM1&quot; url=&quot;192.168.79.142:3306&quot; user=&quot;root&quot;  password=&quot;123456&quot;&gt;
+            &lt;!-- can have multi read hosts --&gt;
+            &lt;readHost host=&quot;hostS1&quot; url=&quot;192.168.79.144:3306&quot; user=&quot;root&quot; password=&quot;123456&quot; /&gt;
+        &lt;/writeHost&gt;
+    &lt;/dataHost&gt;
+</code></pre>
+<p><code>mycat配置了142是主机(writeHost)，144是从机(readHost)。142可以读和写，144只能读。 默认读操作是在144上执行的，当144挂了之后，读操作会到142执行。但如果142挂了，读和写操作都不能执行了。</code> 相当于mycat配置的主机(writeHost)必须活着</p>
+<p><code>mycat在java的整合的方式与mysql的方式是一样的，只要引入mysql和jdbc的包，只是端口改成8066</code></p>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/mysql80-zhu-cong-fu-zhi/">
+              <h3 class="post-title">
+                下一篇：mysql8.0主从复制
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

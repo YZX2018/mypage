@@ -1,0 +1,170 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>分布式事务LCN与Seata原理 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">分布式事务LCN与Seata原理</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2020-12-17</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <blockquote>
+<p>LCN和Seata原理图<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1LCN%E4%B8%8ESeata%E5%8E%9F%E7%90%86-1.jpg" alt="image.png" loading="lazy"></p>
+<blockquote>
+<h3 id="lcn不生产事务只是事务的协调者-lcn-核心采用3pc">LCN:不生产事务，只是事务的协调者   LCN 核心采用3PC</h3>
+<p>原理：<br>
+1.发起方(如支付服务)执行业务时，会通过aop拦截@LcnTransaction注解，会生成一个事务组ID,保存到ThreadLocal，然后通过netty传递给tx-manager(事务协调者)创建一个事务分组<br>
+2执行业务代码，在调用其他服务接口(如订单服务)的时候，会把事务组ID存放到Http请求头传给参与方(订单服务)<br>
+3.参与方在Http请求头上收到分组id的时候，执行完业务不会提交事务，而是监听tx-manager(加入当前事务组)<br>
+4.发起方代码执行完后，通知给tx-manager是提交还是回滚，然后tx-manager通知给参与方做事务处理</p>
+</blockquote>
+<blockquote>
+<h3 id="seata">Seata</h3>
+<p>角色：Transaction Coordinator 事务协调器、Transaction Manager 事务管理者、Resource Manager 资源管理器</p>
+</blockquote>
+<blockquote>
+<h5 id="原理-tm和rm都会被seate代理数据源">原理  TM和RM都会被seate代理数据源</h5>
+<p>1.TM(如支付服务)执行业务时，会通过aop拦截@GlobalTransactional注解，会先查询ThreadLocal是否有XID，如果没有(表示TM)，会请求TC创建一个XID，获取到XID，保存到ThreadLocal<br>
+2.在调用其他服务接口(如订单服务)的时候，会把XID存放到Http请求头传给RM(订单服务)<br>
+3.RM从请求头上获取到XID,会保存到Threadlocal，并且向TC注册事务分支<br>
+4.RM操作sql前，会记录前置镜像到undo_log表，然后执行sql，成功后再记录后置镜像到undo_log表(记录undo_log和执行业务sql是同一事务)，然后提交事务<br>
+5.TM调用RM返回，继续执行业务，如果异常，通知TC，然后TC通知所有事务分支进行回滚<br>
+6.RM收到回滚通知，会执行后置镜像sql，将数据还原，然后删除当前XID中undo_log的镜像记录<br>
+7.如果成功，通知TC，然后TC通知所有事务分支<br>
+8..RM收到成功通知，删除当前XID中undo_log的镜像记录</p>
+</blockquote>
+</blockquote>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/zookeeper-de-zab-xie-yi-yu-nacos-de-raft-xie-yi/">
+              <h3 class="post-title">
+                下一篇：zookeeper的zab协议与Nacos的Raft协议
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>Redis3.0集群方式-Redis Cluster原理 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">Redis3.0集群方式-Redis Cluster原理</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2018-10-08</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <p>在redis3.0之前，redis的高可用是通过主从复制与哨兵机制来实现的。每个节点存有集群中的所有相同数据，从而导致集群的总存储量受限于可用存储内存最小的节点，形成了木桶效应。因为每个节点的数据都是相同的，会造成数据冗余，Redis是基于内存储的，数据量大会导致内存不足。</p>
+<blockquote>
+<p>####Redis3.0之后通过个Redis Cluster来实现集群高可用<br>
+Redis Cluster由多个Redis节点构成(比如：三主三备搭建)，一主一从形成一个节点组，节点组内部分为主备两类节点，对应master和slave节点，两者数据准实时一致，通过异步化的主备复制机制来保证，一个节点组有且只有一个master节点，同时可以有0到多个slave节点(一主N从)，在这个节点组中只有master节点对用户提供写服务，读服务可以由master或者slave提供。<br>
+Redis Cluster采用哈希分区规则,采用虚拟槽分区来解决之前数据冗余的问题，把数据集划分到多个节点上，不同节点组服务的数据没有交集，每个节点组负责整个数据的一个子集。<br>
+虚拟槽分区巧妙地使用了哈希空间，使用分散度良好的哈希函数把所有的数据映射到一个固定范围内的整数集合，整数定义为槽（slot）。比如Redis Cluster槽的范围是0 ～ 16383。槽是集群内数据管理和迁移的基本单位。采用大范围的槽的主要目的是为了方便数据的拆分和集群的扩展，每个节点负责一定数量的槽。<br>
+计算公式：slot = CRC16(key)%16383。每一个节点负责维护一部分槽以及槽所映射的键值数据。<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Redis3.0%E9%9B%86%E7%BE%A4%E6%96%B9%E5%BC%8F-1.jpg" alt="image.png" loading="lazy"><br>
+如上图，三主三备构成Redis Cluster，16383个槽分配到三个不同节点组的master上，slave会同步master的数据，当创建一个key写入redis缓存的时候，redis会计算出这个key分配到哪个槽上。然后请求对应槽上的master节点进行写操作。<br>
+#####查询操作重定向<br>
+当要查询某个key时，Redis Cluster并不会代理查询，那么如果客户端访问的这个节点并不存在的这个key，这个节点是怎么处理的呢？比如我想获取key为msg的值，msg计算出来的槽编号为254，当前节点正好不负责编号为254的槽，那么就会返回客户<br>
+端下面信息：<br>
+-MOVED 254 127.0.0.1:6381<br>
+表示客户端想要的254槽由运行在IP为127.0.0.1，端口为6381的Master实例服务。使用redis客户端操作时，我们就要到这台节点上获取，如果使用的是java客户端，它已经帮我们封装好自动转到对应节点再获取数据返回，并不需要我们自己做跳转<br>
+#####分片迁移<br>
+在一个稳定的Redis cluster下，每一个slot对应的节点是确定的，但是在某些情况下，节点和分片对应的关系会发生变更<br>
+\1. 新加入master节点<br>
+\2. 某个节点宕机<br>
+也就是说当动态添加或减少node节点时，需要将16384个槽做个再分配，槽中的键值也要迁移。当然，这一过程，在目前实现中，还处于半自动状态，需要人工介入。<br>
+新增一个主节点<br>
+新增一个节点D，redis cluster的这种做法是从各个节点的前面各拿取一部分slot到D上。大致就会变成这样：<br>
+节点A覆盖1365-5460<br>
+节点B覆盖6827-10922<br>
+节点C覆盖12288-16383<br>
+节点D覆盖0-1364,5461-6826,10923-12287<br>
+删除一个主节点<br>
+先将节点的数据移动到其他节点上，然后才能执行删除<br>
+#####槽迁移的过程<br>
+槽迁移的过程中有一个不稳定状态，这个不稳定状态会有一些规则，这些规则定义客户端的行为，从而使得RedisCluster不必宕机的情况下可以执行槽的迁移。下面这张图描述了我们迁移编号为1、2、3的槽的过程中，他们在MasterA节点和MasterB节点中的状态。<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Redis3.0%E9%9B%86%E7%BE%A4%E6%96%B9%E5%BC%8F-2.jpg" alt="image.png" loading="lazy"><br>
+简单的工作流程<br>
+\1. 向MasterB发送状态变更命令，吧Master B对应的slot状态设置为IMPORTING<br>
+\2. 向MasterA发送状态变更命令，将Master对应的slot状态设置为MIGRATING<br>
+当MasterA的状态设置为MIGRANTING后，表示对应的slot正在迁移，为了保证slot数据的一致性，MasterA此时<br>
+对于slot内部数据提供读写服务的行为和通常状态下是有区别的，<br>
+MIGRATING状态<br>
+\1. 如果客户端访问的Key还没有迁移出去，则正常处理这个key<br>
+\2. 如果key已经迁移或者根本就不存在这个key，则回复客户端ASK信息让它跳转到MasterB去执行<br>
+IMPORTING状态<br>
+当MasterB的状态设置为IMPORTING后，表示对应的slot正在向MasterB迁入，及时MasterB仍然能对外提供该slot的读写服务，但和通常状态下也是有区别的<br>
+当来自客户端的正常访问不是从ASK跳转过来的，说明客户端还不知道迁移正在进行，很有可能操作了一个目前还没迁移完成的并且还存在于MasterA上的key，如果此时这个key在A上已经被修改了，那么B和A的修改则会发生冲突。所以对于MasterB上的slot上的所有非ASK跳转过来的操作，MasterB都不会处理，而是通过MOVED命令让客户端跳转到MasterA上去执行，这样的状态控制保证了同一个key在迁移之前总是在源节点上执行，迁移后总是在目标节点上执行，防止出现两边同时写导致的冲突问题。而且迁移过程中新增的key一定会在目标节点上执行，源节点也不会新增key，是的整个迁移过程既能对外正常提供服务，又能在一定的时间点完成slot的迁移。</p>
+</blockquote>
+<!-- more -->
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/redis-zhu-cong-fu-zhi-he-shao-bing-ji-zhi/">
+              <h3 class="post-title">
+                下一篇：redis主从复制和哨兵机制
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

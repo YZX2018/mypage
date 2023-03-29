@@ -1,0 +1,268 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>Linux(centos7) Elasticsearch6.5集群安装与Kibana可视化 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">Linux(centos7) Elasticsearch6.5集群安装与Kibana可视化</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2018-11-21</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <p><strong>必须要先安全JDK1.8或以上版本，内存配置1G以上，最好2G</strong></p>
+<p>https://www.elastic.co/cn/downloads/elasticsearch#ga-release  官网下载tar</p>
+<p>上传到linux 解压</p>
+<p>tar -zxvf elasticsearch-6.5.0.tar.gz</p>
+<p>进行bin目录</p>
+<p>cd elasticsearch-6.5.0/bin/</p>
+<p>启动ES</p>
+<p>./elasticsearch</p>
+<figure data-type="image" tabindex="1"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-1.jpg" alt="img" loading="lazy"></figure>
+<p>新建用户 myes</p>
+<p>adduser myes</p>
+<p>给用户操作elasticsearch文件夹的权限（若要修改es数据和日志的存储路径，也需要对对应文件夹授权）</p>
+<p>chown -R myes /data/elasticsearch-6.5.0</p>
+<p>切换到myes用户</p>
+<p>su myes</p>
+<p>启动ES</p>
+<p>./elasticsearch</p>
+<p>但是无法访问，进入到配置文件</p>
+<p>cd elasticsearch-6.5.0/config/</p>
+<figure data-type="image" tabindex="2"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-2.jpg" alt="img" loading="lazy"></figure>
+<p>重启ES  (查询进程ps -ef|grep elasticsearch   kill -9 21667)</p>
+<p>又报错了</p>
+<figure data-type="image" tabindex="3"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-3.jpg" alt="img" loading="lazy"></figure>
+<p>[1]解决方案</p>
+<p>切换到root用户，编辑limits.conf添加类似如下内容</p>
+<p>vi /etc/security/limits.conf</p>
+<p>添加如下内容:</p>
+<p>* soft nofile 65536</p>
+<p>* hard nofile 65536</p>
+<p>* soft nproc 4096</p>
+<p>* hard nproc 4096</p>
+<p>保存后重启<strong>系统</strong>让修改生效</p>
+<p>[2]解决方案</p>
+<p>[2]错误是因为操作系统的vm.max_map_count参数设置太小导致的：</p>
+<p>切换到root用户修改配置sysctl.conf</p>
+<p>vi /etc/sysctl.conf</p>
+<p>添加下面配置：</p>
+<p>vm.max_map_count=262144</p>
+<p>并执行命令，让修改生效：</p>
+<p>sysctl -p</p>
+<p>执行sysctl -a | grep &quot;vm.max_map_count&quot;命令查看修改是否生效</p>
+<p>切换到es用户，重启es，启动成功 -d表示后台启动</p>
+<p>./elasticsearch -d</p>
+<p>//临时关闭</p>
+<p>systemctl stop firewalld</p>
+<figure data-type="image" tabindex="4"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-4.jpg" alt="img" loading="lazy"></figure>
+<p>//禁止开机启动</p>
+<p>systemctl disable firewalld</p>
+<p>Kibana安装</p>
+<p>https://www.elastic.co/downloads/kibana  下载并上传到linux</p>
+<p>tar -zxvf kibana-6.5.1-linux-x86_64.tar.gz</p>
+<p>修改kibana配置文件   <strong>elasticsearch.url必须是主节点的url</strong></p>
+<p>vi kibana-6.5.1-linux-x86_64/config/kibana.yml</p>
+<figure data-type="image" tabindex="5"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-5.jpg" alt="img" loading="lazy"></figure>
+<h3 id="启动kibana服务">启动kibana服务</h3>
+<p>./kibana-6.5.1-linux-x86_64/bin/kibana</p>
+<p>启动成功</p>
+<figure data-type="image" tabindex="6"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-6.jpg" alt="img" loading="lazy"></figure>
+<p>后台启动</p>
+<p>nohup ./kibana-6.5.1-linux-x86_64/bin/kibana &amp;</p>
+<p>访问地址 192.168.79.130:5601</p>
+<figure data-type="image" tabindex="7"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-7.jpg" alt="img" loading="lazy"></figure>
+<p>修改ES的配置文件</p>
+<p>#添加下面配置</p>
+<p>#network.host 绑定ip</p>
+<p>network.host: 127.0.0.1</p>
+<p>.让kibana插件能够连接访问（配置允许跨域访问）</p>
+<p>http.cors.enabled: true</p>
+<p>http.cors.allow-origin: &quot;*&quot;</p>
+<figure data-type="image" tabindex="8"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-8.jpg" alt="img" loading="lazy"></figure>
+<p>启动ES</p>
+<p>成功</p>
+<figure data-type="image" tabindex="9"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-9.jpg" alt="img" loading="lazy"></figure>
+<p>Elasticsearch6.5集群配置  1主2从</p>
+<p>分布式集群配置（设置主从关系）</p>
+<p><strong>master主节点配置</strong></p>
+<p><strong>#集群名称cluster.name: wali</strong></p>
+<p><strong>#指定该服务为指挥官角色</strong></p>
+<p><strong>node.name: master</strong></p>
+<p><strong>node.master: true</strong></p>
+<p><strong>#绑定的ip    network.host: 127.0.0.1</strong></p>
+<figure data-type="image" tabindex="10"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-10.jpg" alt="img" loading="lazy"></figure>
+<p>设置从机配置：2个从</p>
+<p>同主机安装一样，在新目录安装elasticsearch，并将目录名设置为es_slave1 ...</p>
+<p>cp -r elasticsearch-6.5.0 es_slave1</p>
+<p>cp -r elasticsearch-6.5.0 es_slave2</p>
+<p>修改yml文件配置</p>
+<p>#<strong>集群名称，需要和主机的保持一致</strong></p>
+<p><strong>es_slave1配置</strong></p>
+<p>cluster.name: wali</p>
+<p>#设置节点名称</p>
+<p>node.name: slave1</p>
+<p>#设置ip</p>
+<p>network.host: 127.0.0.1</p>
+<p>#指定服务启动端口  因为默认端口号(9200)被主节点占用了</p>
+<p>http.port: 8200</p>
+<p>#找到集群中的master</p>
+<p>discovery.zen.ping.unicast.hosts: [&quot;127.0.0.1&quot;]</p>
+<figure data-type="image" tabindex="11"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-11.jpg" alt="img" loading="lazy"></figure>
+<p><strong>es_slave2配置</strong></p>
+<p>cluster.name: wali</p>
+<p>#设置节点名称</p>
+<p>node.name: slave2</p>
+<p>#设置ip</p>
+<p>network.host: 127.0.0.1</p>
+<p>#指定服务启动端口  因为默认端口号(9200)被主节点占用了</p>
+<p>http.port: 8300</p>
+<p>#找到集群中的master</p>
+<p>discovery.zen.ping.unicast.hosts: [&quot;127.0.0.1&quot;]</p>
+<figure data-type="image" tabindex="12"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-12.jpg" alt="img" loading="lazy"></figure>
+<p><strong>给myes用户配置权限</strong></p>
+<p><strong>chown -R myes /data/es_slave1</strong></p>
+<p><strong>chown -R myes /data/es_slave2</strong></p>
+<p><strong>直接启动 slave会报错</strong></p>
+<figure data-type="image" tabindex="13"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-13.jpg" alt="img" loading="lazy"></figure>
+<p><strong>是因为复制的elasticsearch文件夹下包含了data文件中主节点数据，需要把从节点data文件下的文件清空。</strong></p>
+<p>启动master和slave1</p>
+<figure data-type="image" tabindex="14"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-14.jpg" alt="img" loading="lazy"></figure>
+<p>启动slave2时报错，内存不足failed; error='Cannot allocate memory' (errno=12)</p>
+<figure data-type="image" tabindex="15"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-15.jpg" alt="img" loading="lazy"></figure>
+<p>进行slave2的配置文件config 把内存修改小一点</p>
+<p>vi jvm.options</p>
+<figure data-type="image" tabindex="16"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-16.jpg" alt="img" loading="lazy"></figure>
+<p>启动 3台ES 大功告成</p>
+<figure data-type="image" tabindex="17"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/Elasticsearch-17.jpg" alt="img" loading="lazy"></figure>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/redis-fen-bu-shi-suo-wen-ti/">
+              <h3 class="post-title">
+                下一篇：redis分布式锁问题
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

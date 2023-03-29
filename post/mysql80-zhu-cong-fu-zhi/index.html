@@ -1,0 +1,205 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>mysql8.0主从复制 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">mysql8.0主从复制</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2018-12-08</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <p>mysql主从复制作用：数据库备份、读写分离、高可用、集群<br>
+原理：二进制sql执行文件(binlog)。主机有写的操作修改了数据。会把二进制sql日志文件给从机同步数据</p>
+<pre><code>主机：有读(select)和写(insert、update、delete、create)的权限
+备(从)机：有读的权限    (使用mycat来禁止从机人为作写操作)
+</code></pre>
+<p>​	<br>
+mysql主从复制步骤<br>
+主服务器配置：<br>
+vi /etc/my.cnf  新增以下内容<br>
+server_id=177  ###服务器id<br>
+log-bin=mysql-bin   ###开启日志文件<br>
+binlog-ignore-db=mysql  #不参与主从的数据库名,不参与主从复制的数据库名mysql<br>
+binlog-do-db = db_store   #需要进行binlog日志记录的数据库，多个请另起一行设置binlog_do_db=需要同步的数据库名称，不写全部数据库都备份(binlog日志记录作用是给从服务器进行同步数据)</p>
+<p>重启mysql服务<br>
+systemctl restart mysqld<br>
+主服务器给从服务器账号授权<br>
+进入mysql<br>
+mysql -u root -p<br>
+密码<br>
+GRANT REPLICATION SLAVE ON *.* to 'mysync'@'%' identified by 'Qq123!@#';    一般不用root帐号 随意账号  给从服务器对应<br>
+注意：在mysql8.0不能直接用上面的。要先创建再授权<br>
+create user 'mysync'@'%' identified WITH mysql_native_password by  'Qq123!@#';  (创建用户)<br>
+GRANT REPLICATION SLAVE ON *.* to  'mysync'@'%' ; (用户授权)<br>
+flush privileges; 刷新<br>
+登录主服务器的mysql，查询master的状态<br>
+show master status;<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/mysql8.0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6-1.jpg" alt="image.png" loading="lazy"><br>
+File如果结果为null,则主服务器my.cnf没有配置好.</p>
+<p>从服务器操作：<br>
+将安装好mysql的服务器再克隆一台。要改mac地址<br>
+1、因为克隆的mysql会有相同的uuid   要修改mysql的uuid使之不相同<br>
+vi /var/lib/mysql/auto.cnf  修改uuid,长度要相同<br>
+没修好的话会报<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/mysql8.0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6-2.jpg" alt="image.png" loading="lazy"><br>
+<strong>如果不是克隆的虚拟机，忽略上面的修改操作</strong><br>
+接下来继续从服务器的操作<br>
+vi /etc/my.cnf  新增以下内容<br>
+server_id=178  ###服务器id<br>
+log-bin=mysql-bin   ###开启日志文件<br>
+replicate-do-db= db_store ###需要复制的数据库名，如果复制多个数据库，重复设置这个选项即可<br>
+重启mysql服务<br>
+systemctl restart mysqld</p>
+<p>进入mysql<br>
+mysql -u root -p<br>
+密码</p>
+<p>stop slave<br>
+master_host表示主服务器ip<br>
+change master to master_host='192.168.219.128',master_user='mysync',master_password='Qq123!@#',<br>
+master_log_file='mysql-bin.000002',master_log_pos=343;</p>
+<p>start slave</p>
+<p>检查从服务器复制功能状态<br>
+SHOW SLAVE STATUS \G<br>
+Slave_IO_Running: Yes    //此状态必须YES<br>
+Slave_SQL_Running: Yes     //此状态必须YES<br>
+完成!<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/mysql8.0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6-3.jpg" alt="image.png" loading="lazy"></p>
+<p>读写分离（分库）：主从两台数据库服务器。主数据库能写，从数据库只能读<br>
+mysql本身没有实现读写分离的功能，需要用到mycat中间件</p>
+<p>开一台服务器作mycat 数据库中间件配置，能实现反向代理，数据库服务器通过添加mycat账号来进行权限分配。<br>
+使用mycat账号和mycat当前服务器的ip地址进行登陆，就能实现读写分离，主要与主数据库关联<br>
+在mycat数据库上做操作，从数据库如果设置了这个数据库的同步，也会进行同步<br>
+mycat默认端口号8066</p>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/centos7-an-zhuang-mysql80/">
+              <h3 class="post-title">
+                下一篇：centos7安装mysql8.0
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

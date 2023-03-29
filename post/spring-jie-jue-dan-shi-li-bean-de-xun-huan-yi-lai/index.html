@@ -1,0 +1,170 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>spring解决单实例bean的循环依赖 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">spring解决单实例bean的循环依赖</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2019-07-16</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <p>singletonObjects一级缓存，存放完整的对象</p>
+<p>earlySingletonObjects 二级缓存，存放不完成的对象(只实例化对象，并未赋值)<br>
+singletonFactories 三级缓存，存放不完成的对象(只实例化对象，并未赋值)</p>
+<p>二级缓存存放的就是三级缓存的对象。如果在singletonFactories找到对应的对象，会把它存放到earlySingletonObjects中，并删除singletonFactories中的对象。<br>
+为什么不直接放入二级缓存?<br>
+(是为了做扩展)</p>
+<p>A依赖B   B依赖A<br>
+创建A对象时<br>
+1.首先从容器缓存查询(先查询一级缓存，如果一级缓存不存在，并且A对象被标记为正在创建，就会查二、三级缓存)是否有A对象<br>
+2.缓存中查询不到A对象，开始实例化A对象(此时并未给属性赋值)，然后将A实例(不完整对象)存放到singletonFactories(三级缓存中)<br>
+org.springframework.beans.factory.support.DefaultSingletonBeanRegistry#addSingletonFactory<br>
+3.然后对A对象属性进行赋值<br>
+org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#populateBean<br>
+4.A对象属性中依赖了B对象，当给A对象赋值B时，会从容器中找B对象，此时又会走1 2 3步骤<br>
+5.首先从容器缓存查询(先查询一级缓存，如果一级缓存不存在，并且B对象被标记为正在创建，就会查二、三级缓存)是否有B对象<br>
+6.容器缓存中查询不到A对象，开始实例化B对象(此时并未给属性赋值)，然后将B实例(不完整对象)存放到singletonFactories(三级缓存中)<br>
+7.然后对B对象属性进行赋值<br>
+org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#populateBean<br>
+8.B对象属性中依赖了A对象,当给B对象赋值A时，会从容器中找A对象，此时的A对象已经被标记为正在创建并存放到三级缓存中，所以可以找到A对象的实例，然后B对象赋值时会引用这个A实例(此时的A实例是不完整的对象)<br>
+9.给B赋值完后，此时B对象是一个完成的对象，B对象初始化完成(创建实例并赋值完成)后会存到一级缓存中，并删除二、三级缓存保存的B对象<br>
+10.此时又回到A对象的赋值，找到B对象引用，A对象成功给B属性赋值<br>
+11.A对象赋值完成后,A对象初始化完成(创建实例并赋值完成)后会存到一级缓存中，并删除二、三级缓存保存的A对象<br>
+12.因为B对象的A属性是引用了A对象的地址，此时A对象也赋值完成了，所以B对象引用的A对象也变成了完整的对象(单例对象，引用地址是同一份)<br>
+上面都是指A和B单例对象</p>
+<p>如果把A和B都设置成spoce(&quot;prototype&quot;)多例，就无法解决循环依赖问题，因为spring创建对象时只缓存单例对象<br>
+只能不使用spring的依赖注入，通过set方法手动赋值</p>
+<p>如果把A对象构造方法引用B，B对象构造方法引用A，也是无法解决循环依赖问题，因为两个对象都无法实例化，更不用说赋值了</p>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/spring-yuan-ma-zhi-bean-de-chuang-jian-guo-cheng-yu-spring-aop-yuan-li/">
+              <h3 class="post-title">
+                下一篇：spring源码之Bean的创建过程与Spring AOP原理
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

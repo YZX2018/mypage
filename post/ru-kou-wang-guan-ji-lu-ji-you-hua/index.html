@@ -1,0 +1,196 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>入口网关记录及优化 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">入口网关记录及优化</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2023-03-29</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <blockquote>
+<h3 id="线程池优化方案">线程池优化方案</h3>
+<h5 id="1背景网关开始设计调用下游http服务时使用asynchttpclient是创建一个线程池去异步调用下游http服务创建线程池增加网关资源消耗增加线程开销和cup上下文的切换">1.背景：网关开始设计调用下游http服务时,使用asyncHttpClient是创建一个<code>线程池</code>去异步调用下游http服务，创建线程池增加网关资源消耗，增加线程开销，和cup上下文的切换</h5>
+<h6 id="优化asynchttpclient复用网关服务的work线程池eventloopgroupwork减少线程开锁销对服务器的压力和减少cpu上下文切换qps提升2000">优化：asyncHttpClient复用网关服务的work线程池(eventLoopGroupWork)，减少线程开锁销对服务器的压力和减少cpu上下文切换，QPS提升2000</h6>
+</blockquote>
+<blockquote>
+<h6 id="复用原理是netty会对work线程池进行任务分配一半线程处理本身任务一半处理复用的任务">复用原理：是netty会对work线程池进行任务分配，一半线程处理本身任务，一半处理复用的任务</h6>
+</blockquote>
+<blockquote>
+<h5 id="复用前提是asynchttpclient也是netty开发使用netty的线程池类型">复用前提：是asyncHttpClient也是netty开发，使用netty的线程池类型</h5>
+</blockquote>
+<blockquote>
+<h5 id="2背景使用disruptor高性能队列环形数组存储任务接收到的网关请求并创建一个线程池去消费队列处理任务">2.背景：使用Disruptor高性能队列<code>(环形数组)</code>存储任务<code>(接收到的网关请求)</code>，并创建一个线程池去消费队列处理任务</h5>
+<h5 id="这个设计的初衷是因为disruptor比其他类型的队列性能高在并发处理不过来时能缓存提高性能但是需要另外创建一个线程池去消费队列处理请求增加网关资源消耗增加线程开销和cup上下文的切换">这个设计的初衷是因为Disruptor比其他类型的队列性能高，在并发处理不过来时能缓存提高性能，但是需要另外创建一个线程池去消费队列处理请求，增加网关资源消耗，增加线程开销，和cup上下文的切换。</h5>
+<h5 id="优化去掉disruptor直接使用work线程处理请求因为网关io处理是全异步的已经是纯cpu处理了处理速度很快基本不会缓存大量任务直接使用work线程减少线程开锁销对服务器的压力和减少cpu上下文切换qps提升500-1000">优化：去掉Disruptor，直接使用work线程处理请求，因为网关IO处理是全异步的，已经是纯cpu处理了，处理速度很快，基本不会缓存大量任务，直接使用work线程，减少线程开锁销对服务器的压力和减少cpu上下文切换，QPS提升500-1000</h5>
+</blockquote>
+<blockquote>
+<h3 id="异步处理时注意事项">异步处理时注意事项</h3>
+<h5 id="1异步异常处理">1.异步异常处理</h5>
+<h6 id="异步调用下游如果出现异常要先set到exchange里请求上下文在执行filter链时判断是否有异常再做处理因为异步线程抛出的异常主线程无法捕获到">异步调用下游如果出现异常，要先set到exchange里(请求上下文)，在执行filter链时判断是否有异常再做处理，因为异步线程抛出的异常主线程无法捕获到</h6>
+<h5 id="2异步处理后filterchaindofilter要在oncomplete内调用如果在外面调用未等到当前异步处理完异步回调就执行后面的filter链数据可能会错乱">2.异步处理后filterChain.doFilter()要在onComplete内调用，如果在外面调用，未等到当前异步处理完(异步回调)，就执行后面的Filter链，数据可能会错乱</h5>
+</blockquote>
+<blockquote>
+<h3 id="尽量不强依赖三方框架etcd弱依赖优化">尽量不强依赖三方框架(etcd弱依赖优化)</h3>
+<h5 id="1背景由于对etcd强信任一次etcd出现故障内存使用满后拒绝写入并通知下线所有实例网关接收到下线实例通知把所有实例都从java内存缓存中删除了导致所有请求无求找到实例访问">1.背景：由于对etcd强信任，一次etcd出现故障，内存使用满后拒绝写入，并通知下线所有实例，网关接收到下线实例通知，把所有实例都从java内存缓存中删除了，导致所有请求无求找到实例访问</h5>
+<h5 id="优化1不完全信任etcd弱依赖网到接收到etcd实例下线通知将java缓存中实例进行逻辑删除脏实例等到有一台实例上线就会清空脏实例只要有一台正常实例就可以清空脏实例-脏实例的作用是比如业务方集群有3台实例请求时会先查询正常的实现如果没有正常实例就会使用脏实例即使收到etcd所有服务下线通知还能使用脏实例防止错误删除导致访问不到业务服务">优化1：不完全信任etcd(弱依赖)，网到接收到etcd实例下线通知，将java缓存中实例进行逻辑删除(脏实例)，等到有一台实例上线，就会清空脏实例(只要有一台正常实例，就可以清空脏实例)。脏实例的作用是：比如业务方集群有3台实例，请求时会先查询正常的实现，如果没有正常实例，就会使用脏实例，即使收到etcd所有服务下线通知，还能使用脏实例(防止错误删除导致访问不到业务服务)。</h5>
+<h5 id="优化2使用etcd本地文件保存注册信息当etcd不可用时读取本地文件注册节点信息到jvm内存中">优化2:使用etcd+本地文件保存注册信息，当etcd不可用时，读取本地文件注册节点信息到jvm内存中</h5>
+</blockquote>
+<p>etcd 调优 快照最大压缩2g，因态硬盘，保存7天</p>
+<blockquote>
+<h4 id="在conditionrouteprefilter条件路由使用collectionssort对arraylist存储condition信息排序时抛出javautilconcurrentmodificationexception异常">在ConditionRoutePreFilter(条件路由)使用Collections.sort对ArrayList(存储Condition信息)排序时抛出java.util.ConcurrentModificationException异常</h4>
+<h4 id="原因route信息是共享内存的collectionssort是线程不安全的多个线程同时请求这个route进行排序会使得modcount冲突抛出javautilconcurrentmodificationexception异常">原因：route信息是共享内存的，Collections.sort是线程不安全的，多个线程同时请求这个route进行排序会使得modCount冲突，抛出java.util.ConcurrentModificationException异常</h4>
+<figure data-type="image" tabindex="1"><img src="https://gitee.com/yezhaoxin/static/raw/master/images/rivers01.jpg" alt="image.png" loading="lazy"></figure>
+</blockquote>
+<blockquote>
+<h3 id="网关使用到的设计模式">网关使用到的设计模式</h3>
+<p>责任链，装饰者，模板方法，工厂，单例</p>
+</blockquote>
+<blockquote>
+<h3 id="网关filter插件">网关filter插件</h3>
+<p>1.用户认证(AuthPreFilter)<br>
+2.断路器(CircuitBreakerPreFilter)<br>
+3.条件路由(ConditionRoutePreFilter)<br>
+4.跨域资源共享(CrossDomainPreFilter)<br>
+5.IP黑白名单(IpBlackWhitePreFilter)<br>
+6.负载均衡策略(LoadBalancePreFilter)<br>
+7.参数校验(ParameterVerifyPreFilter)<br>
+8.代理转发(ProxyForwardPreFilter)<br>
+9.分布式限流(RateLimiterPreFilter)<br>
+10.路径重写(RewritePathPreFilter)<br>
+11.标签路由(TagRouterPreFilter)<br>
+12.超时设置(TimeoutPreFilter)</p>
+</blockquote>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/fen-bu-shi-suo-redis-he-zookeeper/">
+              <h3 class="post-title">
+                下一篇：分布式锁(redis和zookeeper)
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

@@ -1,0 +1,180 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>kafka简介与集群搭建 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">kafka简介与集群搭建</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2019-06-28</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <p>Kafka 是一款分布式消息发布和订阅系统，具有高性能、高吞吐量的特点而被 广泛应用与大数据传输场景。</p>
+<p>由于 kafka 具有更好的吞吐量、内置分区、冗余及容错性的优点(kafka 每秒可 以处理几十万消息)，让 kafka 成为了一个很好的大规模消息处理应用的解决方案。</p>
+<h3 id="kafka的应用场景">Kafka的应用场景</h3>
+<p>** 行为跟踪：**kafka 可以用于跟踪用户浏览页面、搜索及其他行为。通过发布订阅模式实时记录到对应的 topic 中，通过后端大数据平台接入处理分析，并 做更进一步的实时处理和监控</p>
+<p>**日志收集：**日志收集方面，有很多比较优秀的产品，比如 Apache Flume，很多公司使用 kafka 代理日志聚合。日志聚合表示从服务器上收集日志文件，然后放到一个集中的平台（文 件服务器）进行处理。在实际应用开发中，我们应用程序的 log 都会输出到本地的磁盘上， 排查问题的话通过 linux 命令来搞定，如果应用程序组成了负载均衡集群，并且集群的机器 有几十台以上，那么想通过日志快速定位到问题，就是很麻烦的事情了。所以一般都会做一 个日志统一收集平台管理 log 日志用来快速查询重要应用的问题。所以很多公司的套路都是 把应用日志几种到 kafka 上，然后分别导入到 es 和 hdfs 上，用来做实时检索分析和离线 统计数据备份等。而另一方面，kafka 本身又提供了很好的 api 来集成日志并且做日志收集</p>
+<h3 id="kafka-本身的架构">Kafka 本身的架构</h3>
+<p>kafka包含 Producer，Broker（kafka 支持水平扩展）、Consumer Group，以及zookeeper 集群。kafka 通过 zookeeper 管理集群配置及服务协同。Producer 使用 push 模式将消息发布到 broker，consumer 通过监听使用 pull 模式从 broker 订阅并消费消息。 多个 broker 协同工作，producer 和 consumer 部署在各个业务逻辑中。三者通过 zookeeper 管理协调请求和转发。这样就组成了一个高性能的分布式消息发布和订阅系统。 图上有一个细节是和其他 mq 中间件不同的点，producer 发送消息到 broker 的过程是 push，而 consumer 从 broker 消费消息的过程是 pull，主动去拉数 据。而不是 broker 把数据主动发送给 consumer</p>
+<figure data-type="image" tabindex="1"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/kafka%E7%AE%80%E4%BB%8B%E4%B8%8E%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-1.jpg" alt="image" loading="lazy"></figure>
+<h3 id="kafka的集群安装部署需要准备zookeeper">kafka的集群安装部署(需要准备zookeeper)</h3>
+<p>搭建3台kafka集群</p>
+<p>首先在每台服务器安装好JDK</p>
+<p>下载kafka</p>
+<p><a href="http://kafka.apache.org/downloads">http://kafka.apache.org/downloads</a>     我下的是 <a href="https://www.apache.org/dyn/closer.cgi?path=/kafka/2.2.1/kafka_2.11-2.2.1.tgz">kafka_2.11-2.2.1.tgz</a> 版本</p>
+<p>1. tar -zxvf kafka_2.11-2.2.1.tgz   解压安装包</p>
+<ol start="2">
+<li>cd kafka_2.11-2.2.1</li>
+</ol>
+<p>3. vi config/server.properties</p>
+<h3 id="修改-serverproperties-配置">修改 server.properties 配置</h3>
+<p>4 修改 zookeeper.connect=172.16.19.186:2181      (zk的地址)</p>
+<p>5. 修改 broker.id=0   (broker的全局唯一编号，集群的kafka不能重复，和zookeeper的myid是一个意思)</p>
+<p>6. 修改 listeners=PLAINTEXT://192.168.79.138:9092  (broker监听IP和端口也可以是域名，修改成当前kafka服务器的ip和端口)</p>
+<p>7.修改 num.partitions=3   (创建topic时设置分区数量，当建立Topic时不指定分区数量，默认的数量是这里设置的，一般需要看服务器的吞吐量来设置，但都会设置成至少与borck数量相同，因为这样有能把topic的分区分配到每台brock上，才能实现集群容错)</p>
+<p>8.在最后面添加 default.replication.factor=2 (表示创建一个分区和一个分区的副本，就是有两个相同的分区，一个leader，一个fowller)</p>
+<p>(一个topic，默认分区的replication(副本)个数，设置成1表示只创建分区本身(分区本身也是个副本，是<a href="http://www.baidu.com/link?url=4s8-AhXX1Ig7M3wDFvq9MrpbIns72lavq6jzW2wGY_UytVnk9frrYXPRFGwb4NSwPhg2EYvCWQUyccdI5sRjnCM1OUvqUDLSDMSLOqyVGRC">Leader</a>副本) ，不得大于集群中broker的个数，可以设置成2(每个分区有一个副本备份数据)，这样每个分区就会多一个副本，就能起容错效果，如果某个brock有p0分区(p0分区<a href="http://www.baidu.com/link?url=4s8-AhXX1Ig7M3wDFvq9MrpbIns72lavq6jzW2wGY_UytVnk9frrYXPRFGwb4NSwPhg2EYvCWQUyccdI5sRjnCM1OUvqUDLSDMSLOqyVGRC">Leader</a>)，但这个borck挂了，另一台borck上还有p0分区(follwer)的副本，这个p0 follwer副本，会成为leader，消费者能正常消费到p0上的消息)</p>
+<p>配置完成</p>
+<p>(<a href="https://blog.51cto.com/littledevil/2134694?source=dra">https://blog.51cto.com/littledevil/2134694?source=dra</a>)这篇文件有其他的配置参数说明。这里配置上面5个基本就可以了</p>
+<p>3台kafka都是相同的操作</p>
+<h3 id="启动">启动</h3>
+<p>先启动zookeeper</p>
+<p>然后分别启动3台kafka       id最小的会选为master</p>
+<p>启动命令：到kafka的bin目录执行</p>
+<p>sh kafka-server-start.sh ../config/server.properties &amp;</p>
+<p>启动成功到zk -client上查询brock的节点数</p>
+<figure data-type="image" tabindex="2"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/kafka%E7%AE%80%E4%BB%8B%E4%B8%8E%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-2.jpg" alt="image" loading="lazy"></figure>
+<p>查询到有 0 1 2三台kafka brock节点  (显示的是broker.id)</p>
+<p>搭建成功</p>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/jdk-dong-tai-dai-li-yu-cglib-dong-tai-dai-li-springboot2x-shi-yong-spring-aop-shi-li/">
+              <h3 class="post-title">
+                下一篇：JDK动态代理与Cglib动态代理(SpringBoot2.x使用spring aop示例)
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

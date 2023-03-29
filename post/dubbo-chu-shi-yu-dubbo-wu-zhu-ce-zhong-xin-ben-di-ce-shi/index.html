@@ -1,0 +1,316 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>dubbo初识与dubbo无注册中心本地测试 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">dubbo初识与dubbo无注册中心本地测试</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2018-02-14</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <p>传统项目是把mvc都写在一个项目中，每个项目部署一个tomcat，项目与项目之间使用httpclient或者webservice来调用</p>
+<p>传统项目架构图  项目中包含视图(freemarker) 控制层 业务层 数据访问层 静态资源等</p>
+<p>随着项目的发展，传统的项目迭代困难，已经跟不上互联网的发展。项目架构变成了分布式微服务的架构形式。</p>
+<p>前后端分离，控制层与服务层分离、以服务来划分各个模块的功能，每个服务都有独立的数据库</p>
+<figure data-type="image" tabindex="1"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/dubbo%E5%88%9D%E8%AF%86-2.jpg" alt="image" loading="lazy"></figure>
+<p>随着客户越来越多，访问量越来越大，每个服务集群的地址也越来越多，传统的调用(httpclient和webservice)已经管理不了那么多的地址，客户不断增加，项目不断迭代，出现了越来越多问题。</p>
+<p>？地址的维护、服务端的负载均衡、限流、容错、降级 、监控等服务治理的问题？</p>
+<p>分布式微服务架构最大的问题就是服务治理</p>
+<p>什么是服务治理？</p>
+<p>服务和服务之间有很多个url(注册中心(zk节点)管理，通过类调用)、依赖关系、负载均衡、容错、自动注册服务等</p>
+<p>服务治理主要作用是改变运行时服务的行为和选址逻辑，达到限流，权重配置等目的。</p>
+<p>基于服务治理的问题就出现了dubbo框架</p>
+<p>Dubbo是一个RPC远程调用框架、分布式服务治理框架</p>
+<p>RPC:远程调用，服务与服务之间相互进地通讯。</p>
+<p>Dubbo四大模块：</p>
+<p>生产者Provider(暴露服务的服务提供方)</p>
+<p>消费者Consumer(调用远程服务的服务消费方)</p>
+<p>注册中心Registry(服务注册与发现的注册中心）</p>
+<p>监控中心Monitor(统计服务的调用次数和调用时间的监控中心)</p>
+<hr>
+<p>Container(服务运行容器)，dubbo内置容器，发布提供服务时都会有运行的容器，类似与war项目发布到tomcat容器上</p>
+<p>dubbo官方的图</p>
+<figure data-type="image" tabindex="2"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/dubbo%E5%88%9D%E8%AF%86-3.jpg" alt="image" loading="lazy"></figure>
+<p>首先生产者将服务发布到注册中心（zk），使用zk持久节点进行存储，消费订阅zk节点，一但有节点变更，zk通过事件通知传递给消费者，消费者可以调用生产者服务。</p>
+<p>服务与服务之间进行调用，都会在监控中心，存储一个记录(日志)</p>
+<p>dubbo能做什么？</p>
+<p>1.透明化的远程方法调用，就像调用本地方法一样调用远程方法，只需简单配置，没有任何API侵入。</p>
+<p>2.软负载均衡及容错机制，可在内网替代F5等硬件负鞭均衡器，降低成本，减少单点。</p>
+<p>3.服务自动注册与发现，不再需要写死服务提供方地址，注册中心基于接口名查询服务提供者的IP地址，并且能够平滑添加或删除服务提供者。</p>
+<p>4.Dubbo采用全Spring 配置方式，功明化接入应用，对应用没有任何API侵</p>
+<p>只需用Spring加载Dubbo的配置即可，Dubbo基于Spring的Schema扩展进行加载。</p>
+<p>dubbo无注册中心本地测试演示  (消费者直接声明url)</p>
+<p>生产者代码，创建api模块和provider模块(实现类)</p>
+<p>service-api模块代码</p>
+<p>HelloService类</p>
+<pre><code class="language-java">package service;
+public interface HelloService {
+    String hello(String msg);
+}
+</code></pre>
+<p>provider模块代码</p>
+<p>HelloServiceImpl 类</p>
+<pre><code class="language-java">package springbootdubboservice.dubboprovider.service;
+import service.HelloService;
+
+// 测试了可以不写@Service也能调用
+public class HelloServiceImpl implements HelloService {
+    @Override
+    public String hello(String msg) {
+        return &quot;hello dubbo&quot; + msg;
+    }
+}
+</code></pre>
+<p>Provider类</p>
+<pre><code class="language-java">package yxh;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+public class Provider {
+    public static void main(String[] args) throws Exception {
+        ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(&quot;dubbo-server.xml&quot;);
+        context.start();
+        System.in.read(); // 按任意键退出
+    }
+}
+</code></pre>
+<p>dubbo-server.xml配置文件</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;beans xmlns=&quot;http://www.springframework.org/schema/beans&quot;
+       xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xmlns:dubbo=&quot;http://code.alibabatech.com/schema/dubbo&quot;
+       xsi:schemaLocation=&quot;http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://code.alibabatech.com/schema/dubbo
+       http://code.alibabatech.com/schema/dubbo/dubbo.xsd&quot;&gt;
+    &lt;!-- 提供方应用信息，用于计算依赖关系 --&gt;
+    &lt;dubbo:application name=&quot;yxh-dubbo-server&quot; owner=&quot;yxh&quot;/&gt;
+    &lt;!-- 不使用registry --&gt;
+    &lt;dubbo:registry address=&quot;N/A&quot;/&gt;
+    &lt;!-- 用dubbo协议在20880端口暴露服务 --&gt;
+    &lt;dubbo:protocol name=&quot;dubbo&quot; port=&quot;20880&quot;/&gt;
+    &lt;!-- 声明需要暴露的服务接口 --&gt;
+    &lt;dubbo:service interface=&quot;dubbo.yxh.api.HelloService&quot;
+                   class=&quot;yxh.HelloServiceImpl&quot;/&gt;
+&lt;/beans&gt;
+</code></pre>
+<p>pox.xml配置文件</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;project xmlns=&quot;http://maven.apache.org/POM/4.0.0&quot;
+         xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
+         xsi:schemaLocation=&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd&quot;&gt;
+    &lt;parent&gt;
+        &lt;artifactId&gt;dubbo-server&lt;/artifactId&gt;
+        &lt;groupId&gt;good&lt;/groupId&gt;
+        &lt;version&gt;1.0-SNAPSHOT&lt;/version&gt;
+    &lt;/parent&gt;
+    &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+&lt;/project&gt;
+</code></pre>
+<pre><code>&lt;artifactId&gt;dubbo-provider&lt;/artifactId&gt;
+&lt;dependencies&gt;
+    &lt;!-- https://mvnrepository.com/artifact/com.alibaba/dubbo --&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;com.alibaba&lt;/groupId&gt;
+        &lt;artifactId&gt;dubbo&lt;/artifactId&gt;
+        &lt;version&gt;2.6.6&lt;/version&gt;
+    &lt;/dependency&gt;
+
+    &lt;!-- 高版本dubbo需要引入这个依赖 --&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;io.netty&lt;/groupId&gt;
+        &lt;artifactId&gt;netty-all&lt;/artifactId&gt;
+        &lt;version&gt;4.1.32.Final&lt;/version&gt;
+    &lt;/dependency&gt;
+
+    &lt;dependency&gt;
+        &lt;groupId&gt;good&lt;/groupId&gt;
+        &lt;artifactId&gt;service-api&lt;/artifactId&gt;
+        &lt;version&gt;1.0-SNAPSHOT&lt;/version&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;
+</code></pre>
+<p>消费者代码，创建dubbo-client模块</p>
+<p>Client类</p>
+<pre><code class="language-java">package yxh;
+import dubbo.yxh.api.HelloService;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+public class Client {
+    public static void main(String[] args) {
+        ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(&quot;dubbo-client.xml&quot;);
+        HelloService helloService = (HelloService) context.getBean(&quot;helloService&quot;);
+        System.out.println(helloService.hello(&quot;666&quot;));
+    }
+}
+</code></pre>
+<p>dubbo-client.xml配置文件   消息接口加上url</p>
+<pre><code class="language-xml">&lt;!-- 消费方应用信息 --&gt;
+&lt;dubbo:application name=&quot;yxh-dubbo-client&quot; owner=&quot;yxh&quot;/&gt;
+&lt;!-- 不使用registry --&gt;
+&lt;dubbo:registry address=&quot;N/A&quot;/&gt;
+&lt;!-- 用dubbo协议在20880端口暴露服务 --&gt;
+&lt;dubbo:protocol name=&quot;dubbo&quot; port=&quot;20880&quot;/&gt;
+&lt;!-- 声明需要消费的服务接口 --&gt;
+&lt;dubbo:reference id=&quot;helloService&quot; interface=&quot;dubbo.yxh.api.HelloService&quot;
+url=&quot;dubbo://192.168.149.1:20880/dubbo.yxh.api.HelloService&quot;/&gt;
+</code></pre>
+<p>pom.xml配置文件</p>
+<pre><code class="language-xml">&lt;dependencies&gt;
+    &lt;!-- https://mvnrepository.com/artifact/com.alibaba/dubbo --&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;com.alibaba&lt;/groupId&gt;
+        &lt;artifactId&gt;dubbo&lt;/artifactId&gt;
+        &lt;version&gt;2.6.6&lt;/version&gt;
+    &lt;/dependency&gt;
+    &lt;!-- 高版本dubbo需要引入这个依赖 --&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;io.netty&lt;/groupId&gt;
+        &lt;artifactId&gt;netty-all&lt;/artifactId&gt;
+        &lt;version&gt;4.1.32.Final&lt;/version&gt;
+    &lt;/dependency&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;good&lt;/groupId&gt;
+        &lt;artifactId&gt;service-api&lt;/artifactId&gt;
+        &lt;version&gt;1.0-SNAPSHOT&lt;/version&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;
+</code></pre>
+<p>启动生产者</p>
+<p>右键Debug  Provider类的main方法即可</p>
+<p>日志可看到dubbo的url地址为</p>
+<p>dubbo://192.168.149.1:20880/dubbo.yxh.api.HelloService</p>
+<p>和消费者配置的url一样</p>
+<p>启动消费者</p>
+<p>Client类 启动main</p>
+<p>打印出生产者的实例方法的结果</p>
+<p>测试成功</p>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/idea-kai-fa-cha-jian/">
+              <h3 class="post-title">
+                下一篇：idea开发插件
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

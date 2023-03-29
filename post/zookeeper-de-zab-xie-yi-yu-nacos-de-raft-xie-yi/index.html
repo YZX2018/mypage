@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>zookeeper的zab协议与Nacos的Raft协议 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">zookeeper的zab协议与Nacos的Raft协议</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2019-08-23</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <blockquote>
+<p>zab一致性算法原理，以zookeeper为例<br>
+zab原子广播协议中 两种模式<br>
+1.恢复模式：Leader宕机后选举新Leader<br>
+2.广播模式：解决每个节点数据同步问题<br>
+ZK每个节点都有myid(手动配置)和zxid(自动生成，默认为0)</p>
+</blockquote>
+<blockquote>
+<p>zab类似paxos，但zab在生成全局zxid时会使用锁保存zxid线程安全</p>
+<h5 id="zk同步原理">zk同步原理</h5>
+<p>Leader节点会生成全局zxid，然后通过两段提交协议进行同步<br>
+1.第一阶段同步，带上zxid请求每个follower节点是否可以允许同步数据<br>
+2.Leader节点接收到半数以上的节点可以同步,Leader节点就会开始给Follower进行同步数据</p>
+</blockquote>
+<blockquote>
+<h5 id="zk选举底层实现原理">ZK选举底层实现原理：</h5>
+<p>1.先检查zxid，谁最大，谁就为Leader，因为zxid越大表示当前节点数据越新<br>
+2.如果zxid都一样的情况，myid最大的为leader</p>
+</blockquote>
+<p>备注：zk的Observer(特殊的follower，只读，只监听同步，不参与投票选举(扩容时不影响本身选举的时候效率，能提高查询性能)</p>
+<hr>
+<h4 id="raft协议">Raft协议</h4>
+<blockquote>
+<p>在Raft协议算法上角色有跟随者(不竞选领导角色)、竞选者(候选人)、领导角色<br>
+选举票数满足半数以上就会成为领导角色</p>
+<h4 id="选举过程">选举过程：</h4>
+<p>默认情况下每个节点都为跟随者，每个节点会随机生成一个超时时间，大概100-300ms，超时时间这后，当前节点的状态就会由跟随者变为竞选者，会给其他节点发出选举投票通知，只要竞选者有超过半数以上的票，就成为领导角色<br>
+所以节点的超时时间最短，最有可能成为领导角色</p>
+<h4 id="故障选举过程">故障选举过程</h4>
+<p>如果某跟随者节点不能及时收到领导角色的消息(心跳检测)，那么这个跟随者状态就会变为竞选者状态，给其他节点发出选举投票通知，其他节点确认领导角色挂了，就会进行投票，竞选者超过半数以上即可选举为领导角色</p>
+<h4 id="raft采用日志复制形式同步数据">Raft采用日志复制形式同步数据</h4>
+<p>1.所有的写请求都是统一交给领导角色完成，会写入对应的日志，标记该状态为提交状态。<br>
+2.领导角色将日志以心跳的形式发送其他的跟随者，只要满足过半的跟随者可以写入数据，则直接通知其他节点同步该数据，这个称为日志复制</p>
+</blockquote>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/jdk18hashmap-yi-ji-concurrenthashmap-yuan-ma-fen-xi/">
+              <h3 class="post-title">
+                下一篇：JDK1.8HashMap以及ConcurrentHashMap源码分析
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

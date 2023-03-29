@@ -1,0 +1,375 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>springboot+dubbo+zk集群搭建 | 首页</title>
+<meta name="description" content="温故而知新">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://yzx2018.github.io/mypage/">
+        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://yzx2018.github.io/mypage/">
+        <h1 class="site-title">首页</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">springboot+dubbo+zk集群搭建</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2019-02-09</span>
+            
+          </div>
+          <div class="post-content" v-pre>
+            <p>zookeeper的集群搭建在上一编已经说过，不会的可以查看。</p>
+<p>下面开始搭建springboot+dubbo+zk注册中心的demo</p>
+<p><strong>生产者</strong>工程目录如图</p>
+<figure data-type="image" tabindex="1"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-1.jpg" alt="image" loading="lazy"></figure>
+<p><strong>一、创建dubbo-provider父工程</strong><br>
+一、创建dubbo-provider父工程</p>
+<p>父pom.xml</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;project xmlns=&quot;http://maven.apache.org/POM/4.0.0&quot; xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
+         xsi:schemaLocation=&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd&quot;&gt;
+    &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+    &lt;packaging&gt;pom&lt;/packaging&gt;
+    &lt;modules&gt;
+        &lt;module&gt;provider&lt;/module&gt;
+        &lt;module&gt;api&lt;/module&gt;
+    &lt;/modules&gt;
+    &lt;parent&gt;
+        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;
+        &lt;version&gt;2.1.4.RELEASE&lt;/version&gt;
+        &lt;relativePath/&gt; &lt;!-- lookup parent from repository --&gt;
+    &lt;/parent&gt;
+    &lt;groupId&gt;springboot&lt;/groupId&gt;
+    &lt;artifactId&gt;dubbo-provider&lt;/artifactId&gt;
+    &lt;version&gt;0.0.1-SNAPSHOT&lt;/version&gt;
+    &lt;name&gt;dubbo-provider&lt;/name&gt;
+    &lt;description&gt;Demo project for Spring Boot&lt;/description&gt;
+    &lt;properties&gt;
+        &lt;java.version&gt;1.8&lt;/java.version&gt;
+    &lt;/properties&gt;
+    &lt;dependencies&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter&lt;/artifactId&gt;
+        &lt;/dependency&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter-test&lt;/artifactId&gt;
+            &lt;scope&gt;test&lt;/scope&gt;
+        &lt;/dependency&gt;
+    &lt;/dependencies&gt;
+&lt;/project&gt;
+
+
+</code></pre>
+<p>二、创建provider工程(Module)</p>
+<p>pom.xml文件</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;project xmlns=&quot;http://maven.apache.org/POM/4.0.0&quot;
+         xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
+         xsi:schemaLocation=&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd&quot;&gt;
+    &lt;parent&gt;
+        &lt;artifactId&gt;dubbo-provider&lt;/artifactId&gt;
+        &lt;groupId&gt;springboot&lt;/groupId&gt;
+        &lt;version&gt;0.0.1-SNAPSHOT&lt;/version&gt;
+    &lt;/parent&gt;
+    &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+    &lt;packaging&gt;jar&lt;/packaging&gt;
+    &lt;artifactId&gt;provider&lt;/artifactId&gt;
+    &lt;dependencies&gt;
+        &lt;!-- https://mvnrepository.com/artifact/com.alibaba.boot/dubbo-spring-boot-autoconfigure --&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;com.alibaba.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;dubbo-spring-boot-starter&lt;/artifactId&gt;
+            &lt;version&gt;0.2.1.RELEASE&lt;/version&gt;
+        &lt;/dependency&gt;
+           &lt;dependency&gt;
+        &lt;groupId&gt;com.alibaba&lt;/groupId&gt;
+        &lt;artifactId&gt;dubbo&lt;/artifactId&gt;
+        &lt;version&gt;2.6.5&lt;/version&gt;
+    &lt;/dependency&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.apache.curator&lt;/groupId&gt;
+        &lt;artifactId&gt;curator-framework&lt;/artifactId&gt;
+        &lt;version&gt;2.12.0&lt;/version&gt;
+    &lt;/dependency&gt;
+    &lt;!-- exclusions去掉log4j的依赖，会冲突 --&gt;
+    &lt;dependency&gt;
+        &lt;artifactId&gt;zookeeper&lt;/artifactId&gt;
+        &lt;groupId&gt;org.apache.zookeeper&lt;/groupId&gt;
+        &lt;version&gt;3.4.14&lt;/version&gt;
+        &lt;exclusions&gt;
+            &lt;exclusion&gt;
+                &lt;groupId&gt;org.slf4j&lt;/groupId&gt;
+                &lt;artifactId&gt;slf4j-log4j12&lt;/artifactId&gt;
+            &lt;/exclusion&gt;
+            &lt;exclusion&gt;
+                &lt;groupId&gt;log4j&lt;/groupId&gt;
+                &lt;artifactId&gt;log4j&lt;/artifactId&gt;
+            &lt;/exclusion&gt;
+            &lt;exclusion&gt;
+                &lt;groupId&gt;io.netty&lt;/groupId&gt;
+                &lt;artifactId&gt;netty&lt;/artifactId&gt;
+            &lt;/exclusion&gt;
+        &lt;/exclusions&gt;
+    &lt;/dependency&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;springboot&lt;/groupId&gt;
+        &lt;artifactId&gt;api&lt;/artifactId&gt;
+        &lt;version&gt;0.0.1-SNAPSHOT&lt;/version&gt;
+    &lt;/dependency&gt;
+	&lt;/dependencies&gt;
+&lt;/project&gt;
+</code></pre>
+<p><strong>application.yml配置文件信息</strong><br>
+#dubbo的name默认使用${spring.application.name}，所以不用配置dubbo.application.name也行<br>
+spring:<br>
+ application:<br>
+  name: dubbo-provider<br>
+#使用注解，要配置dubbo的扫描包路径<br>
+dubbo:<br>
+ scan:<br>
+  base-packages: com.facade<br>
+#dubbo启动的端口<br>
+ protocol:<br>
+  port: 20880<br>
+ registry:<br>
+  protocol: zookeeper<br>
+  address: 192.168.79.135:2181,192.168.79.136:2181,192.168.79.137:2181</p>
+<p>定义一个服务接口</p>
+<figure data-type="image" tabindex="2"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-2.jpg" alt="image" loading="lazy"></figure>
+<p>服务接口的实现</p>
+<figure data-type="image" tabindex="3"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-3.jpg" alt="image" loading="lazy"></figure>
+<p>定义服务接口暴露出去的dubbo实现(因为实际项目中会包装一层facade，而不会将service当作dubbo接口)</p>
+<figure data-type="image" tabindex="4"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-4.jpg" alt="image" loading="lazy"></figure>
+<p><strong>二、创建provider的api工程(Module)</strong></p>
+<p><strong>api工程用于给消费者工程引用依赖得到api接口来调用</strong></p>
+<p><strong>pom.xml文件，什么都不用依赖</strong></p>
+<figure data-type="image" tabindex="5"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-5.jpg" alt="image" loading="lazy"></figure>
+<p>暴露给其他服务的api接口</p>
+<figure data-type="image" tabindex="6"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-6.jpg" alt="image" loading="lazy"></figure>
+<p><strong><strong>最后就是springboot启动服务的类</strong></strong></p>
+<figure data-type="image" tabindex="7"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-7.jpg" alt="image" loading="lazy"></figure>
+<p><strong>生产者工程搭建成功</strong></p>
+<p>****消费者<strong>工程目录如图</strong></p>
+<figure data-type="image" tabindex="8"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-8.jpg" alt="image" loading="lazy"></figure>
+<p><strong>一、创建dubbo-consumer父工程</strong></p>
+<p><strong>pom.xml文件</strong></p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;project xmlns=&quot;http://maven.apache.org/POM/4.0.0&quot; xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
+   xsi:schemaLocation=&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd&quot;&gt;
+   &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+    &lt;packaging&gt;pom&lt;/packaging&gt;
+    &lt;modules&gt;
+        &lt;module&gt;consumer&lt;/module&gt;
+    &lt;/modules&gt;
+    &lt;parent&gt;
+      &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+      &lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;
+      &lt;version&gt;2.1.4.RELEASE&lt;/version&gt;
+      &lt;relativePath/&gt; &lt;!-- lookup parent from repository --&gt;
+   &lt;/parent&gt;
+   &lt;groupId&gt;springboot&lt;/groupId&gt;
+   &lt;artifactId&gt;dubbo-consumer&lt;/artifactId&gt;
+   &lt;version&gt;0.0.1-SNAPSHOT&lt;/version&gt;
+   &lt;name&gt;dubbo-consumer&lt;/name&gt;
+   &lt;description&gt;Demo project for Spring Boot&lt;/description&gt;
+   &lt;properties&gt;
+      &lt;java.version&gt;1.8&lt;/java.version&gt;
+   &lt;/properties&gt;
+   &lt;dependencies&gt;
+      &lt;dependency&gt;
+         &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+         &lt;artifactId&gt;spring-boot-starter&lt;/artifactId&gt;
+      &lt;/dependency&gt;
+      &lt;dependency&gt;
+         &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+         &lt;artifactId&gt;spring-boot-starter-test&lt;/artifactId&gt;
+         &lt;scope&gt;test&lt;/scope&gt;
+      &lt;/dependency&gt;
+   &lt;/dependencies&gt;
+&lt;/project&gt;
+</code></pre>
+<p><strong>application.yml配置文件</strong></p>
+<p>#dubbo的name默认使用${spring.application.name}，所以不用配置dubbo.application.name也行<br>
+spring:<br>
+ application:<br>
+  name: dubbo-consumer<br>
+#dubbo启动的端口<br>
+dubbo:<br>
+ protocol:<br>
+  port: 20881<br>
+ registry:<br>
+  protocol: zookeeper<br>
+  address: 192.168.79.135:2181,192.168.79.136:2181,192.168.79.137:2181<br>
+这里用springboot的test来启动消费者来</p>
+<figure data-type="image" tabindex="9"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-9.jpg" alt="image" loading="lazy"></figure>
+<p><strong>消费者工程搭建成功</strong></p>
+<p><strong>现在启动生产者服务(直接启动springboot的main就可以了)</strong></p>
+<figure data-type="image" tabindex="10"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-10.jpg" alt="image" loading="lazy"></figure>
+<p>生产者启动成功</p>
+<p>启动消费者(调用ConsumerTest测试)</p>
+<figure data-type="image" tabindex="11"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-11.jpg" alt="image" loading="lazy"></figure>
+<p><strong>调用成功，说明搭建的springboot+dubbo+zk集群成功了</strong></p>
+<p>查询zk节点的变化，看看暴露的接口存到注册中心的是什么东西</p>
+<p>发现多了dubbo节点，并者dubbo节点的子节点下有注册到zk上的服务(api接口)名称 有多少个服务，dubbo下就有多少个子节点</p>
+<p>/dubbo/com.api.HelloFacade</p>
+<figure data-type="image" tabindex="12"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-12.jpg" alt="image" loading="lazy"></figure>
+<figure data-type="image" tabindex="13"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-13.jpg" alt="image" loading="lazy"></figure>
+<p>接口节点上还有providers，configuartors等节点</p>
+<figure data-type="image" tabindex="14"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-14.jpg" alt="image" loading="lazy"></figure>
+<p>查看providers节点下发现这一串东西(这是生产者注册到zk上的地址)</p>
+<p>[dubbo%3A%2F%2F172.16.19.186%3A20880%2Fcom.api.HelloFacade%3Fanyhost%3Dtrue%26application%3Ddubboprovider%26bean.name%3DServiceBean%3Acom.api.HelloFacade%3A1.0.0%26dubbo%3D2.0.2%26generic%3Dfalse%26interface%3Dcom.api.HelloFacade%26methods%3DsayH%26pid%3D11836%26revision%3D1.0.0%26side%3Dprovider%26timestamp%3D1557481294861%26version%3D1.0.0]</p>
+<p>百度一下url解码</p>
+<p>[dubbo://172.16.19.186:20880/com.api.HelloFacade?anyhost=true&amp;application=dubboprovider&amp;bean.name=ServiceBean:com.api.HelloFacade:1.0.0&amp;dubbo=2.0.2&amp;generic=false&amp;interface=com.api.HelloFacade&amp;methods=sayH&amp;pid=11836&amp;revision=1.0.0&amp;side=provider&amp;timestamp=1557481294861&amp;version=1.0.0]</p>
+<p><strong>dubbo使用zookeeper作为注解中心，服务启动后，zk节点会创建/dubbo节点，然后把在dubbo节点上创建生产者注册到zk的服务(api接口)名称/dubbo/com.api.HelloFacade，该节点下会保存provider和consumer的节点，/dubbo/com.api.HelloFacade/provider节点(持久节点)下会保存生产者的地址信息(协议://ip+port/接口名称...)，provider节点下保存的 地址信息(临时节点)，生产者关闭服务地址节点就会被删除。</strong></p>
+<p>看出这是dubbo协议的地址，我们的配置文件没配置dubbo的协议，说明dubbo默认使用的就是dubbo协议。</p>
+<p>消费者服务启动时就会HelloFacade的代理对象</p>
+<p>消费者调用dubbo接口的方法时会到zk下找到对应接口的生产者地址(172.16.19.186:20880)，消费者与生产者通过netty进行通信，生产者通过动态代理和反射机制把方法执行后的返回值通过netty通讯传给消费者</p>
+<p>我们可以看看官网上的图</p>
+<p>0.服务容器负责启动，加载，运行服务提供者。</p>
+<ol>
+<li>
+<p>服务提供者在启动时，向注册中心注册自己提供的服务。</p>
+</li>
+<li>
+<p>服务消费者在启动时，向注册中心订阅自己所需的服务。</p>
+</li>
+<li>
+<p>注册中心返回服务提供者地址列表给消费者，如果有变更，注册中心将基于长连接推送变更数据给消费者。</p>
+</li>
+<li>
+<p>服务消费者，从提供者地址列表中，基于软负载均衡算法，选一台提供者进行调用，如果调用失败，再选另一台调用。</p>
+</li>
+<li>
+<p>服务消费者和提供者，在内存中累计调用次数和调用时间，定时每分钟发送一次统计数据到监控中心</p>
+<hr>
+<p>第4步invoke是通过netty通信进行，消费者会生成动态代理类，调用服务的方法时会请求生产者，生产者会通过invoke调用方法，然后把返回值传给消费者 (相当于消费者proxy.newproxyinstance(...)时，代理对象会触发invocationHandler，invocationHandler接口的实现中处理与生产者进行传递消息，生产者把方法调用后的结果传递给消费者)</p>
+</li>
+</ol>
+<figure data-type="image" tabindex="15"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/springboot+dubbo+zk%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-15.jpg" alt="image" loading="lazy"></figure>
+<p>下一编会对dubbo的生产者和消费者的一些参数配置和服务治理的参数进行测试说明。</p>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/linux-da-jian-zookeeper-ji-qun/">
+              <h3 class="post-title">
+                下一篇：linux搭建zookeeper集群
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">温故而知新</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

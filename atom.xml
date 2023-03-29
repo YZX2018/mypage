@@ -1,133 +1,2098 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://yzx2018.github.io/mypage/</id>
-    <title>Gridea</title>
-    <updated>2023-03-23T08:02:31.905Z</updated>
+    <title>首页</title>
+    <updated>2023-03-29T08:35:30.565Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://yzx2018.github.io/mypage/"/>
     <link rel="self" href="https://yzx2018.github.io/mypage/atom.xml"/>
     <subtitle>温故而知新</subtitle>
     <logo>https://yzx2018.github.io/mypage/images/avatar.png</logo>
     <icon>https://yzx2018.github.io/mypage/favicon.ico</icon>
-    <rights>All rights reserved 2023, Gridea</rights>
+    <rights>All rights reserved 2023, 首页</rights>
     <entry>
-        <title type="html"><![CDATA[kafka原理解析与kafka java api参数说明]]></title>
-        <id>https://yzx2018.github.io/mypage/post/kafka-yuan-li-jie-xi-yu-kafka-java-api-can-shu-shuo-ming/</id>
-        <link href="https://yzx2018.github.io/mypage/post/kafka-yuan-li-jie-xi-yu-kafka-java-api-can-shu-shuo-ming/">
+        <title type="html"><![CDATA[入口网关记录及优化]]></title>
+        <id>https://yzx2018.github.io/mypage/post/ru-kou-wang-guan-ji-lu-ji-you-hua/</id>
+        <link href="https://yzx2018.github.io/mypage/post/ru-kou-wang-guan-ji-lu-ji-you-hua/">
         </link>
-        <updated>2023-03-23T08:01:50.000Z</updated>
-        <content type="html"><![CDATA[<p>kafka由producer consumer broker topic partitions(分区)组成</p>
-<p>kafka cluster(集群)就是由多个broker topic partitions(分区)组成</p>
-<p>开局一张图</p>
-<figure data-type="image" tabindex="1"><img src="https://gitee.com/yezhaoxin/static/raw/master/images/1240.jpg" alt="image" loading="lazy"></figure>
-<figure data-type="image" tabindex="2"><img src="https://upload-images.jianshu.io/upload_images/14890912-968dfeef183e2a73.gif?imageMogr2/auto-orient/strip" alt="image.gif" loading="lazy"></figure>
-<p>上面表示一个kafka集群交互的流程图，kafka cluster中有3个brock(表示有3台kafka服务的集群)，有一个topic名称为topic0的主题，topic0主题有3个partitions(分区)，每个partition有3个副本(包含本身，partition本身也是副本，是leader副本。一个leader分区，两个follwer分区)</p>
-<p>Producers往Brokers里面的指定topic0中写消息(发消息时指定主题的名称，默认会创建主题)，Consumers从Brokers里面拉去指定topic0的消息。</p>
-<p>topic只是大的概论，真正存放消息的是partitions(分区)</p>
-<p>从图可以看出 topic0创建了3个分区 ([1 p2 p0)，每个brock分配一个分区，上面的图包含了两个副本，如果只创建分区本身是图如下</p>
-<figure data-type="image" tabindex="3"><img src="https://gitee.com/yezhaoxin/static/raw/master/images/kafka2.jpg" alt="image" loading="lazy"></figure>
-<figure data-type="image" tabindex="4"><img src="https://upload-images.jianshu.io/upload_images/14890912-495f09f98442bc34.gif?imageMogr2/auto-orient/strip" alt="image.gif" loading="lazy"></figure>
-<p>分区上的存储的<img src="https://upload-images.jianshu.io/upload_images/14890912-a4f994eaacbbe632.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image" loading="lazy"></p>
-<p><img src="https://upload-images.jianshu.io/upload_images/14890912-29586ac7da643f12.gif?imageMogr2/auto-orient/strip" alt="image.gif" loading="lazy"> 就是每一条的消息(相当于rocketmq的队列)，消息是有顺序的，从0开始(offset)，消费者pull消息的时候，就是从分区上获取里面存放的消息，topic的每个分区存放的消息都不一样</p>
-<p>因为topic的每个分区存放的消息都不一样。所有当brock0挂掉后，p1上未被消费的消费就消费不到了。只有当重启之后才能消息。这样就没有起到消息集群容错的效果。所以有了分区副本的概念</p>
-<figure data-type="image" tabindex="5"><img src="https://gitee.com/yezhaoxin/static/raw/master/images/kafka3.jpg" alt="image" loading="lazy"></figure>
-<figure data-type="image" tabindex="6"><img src="https://upload-images.jianshu.io/upload_images/14890912-750ed70609cd608a.gif?imageMogr2/auto-orient/strip" alt="image.gif" loading="lazy"></figure>
-<p>上图表示topic0主题有3个分区(p1 p2 p0)，每个分区有两个副本(replica)(也可以说topic0有3个不同的分区，每个分区有3个副本(包括自己本身，本身是leader分区副本，其他两个是follwer分区副本))</p>
-<p>分区分为leader分区和follwer分区，我们可以在zookeeper上查看topic0的分区的leader分布在哪个brock上</p>
-<p>在zk的客户端执行命令get /brokers/topics/topic0  (这个命令可以查到topic0主题下partitions分布在哪个brock)</p>
-<figure data-type="image" tabindex="7"><img src="https://gitee.com/yezhaoxin/static/raw/master/images/kafka4.jpg" alt="image" loading="lazy"></figure>
-<figure data-type="image" tabindex="8"><img src="https://upload-images.jianshu.io/upload_images/14890912-ed1657872940a4b3.gif?imageMogr2/auto-orient/strip" alt="image.gif" loading="lazy"></figure>
-<p>可以看到&quot;partitions&quot;:{&quot;2&quot;:[1,2,0],&quot;1&quot;:[0,1,2],&quot;0&quot;:[2,0,1]}}，表示p2分区分布在brock.id为1和2和0的服务器上(因为有3个分布，每个brock上都会有，所有1 2 0 brock都有p2分区)</p>
-<p>每个brock上都有p2分区，但是leader分区只有一个，其他的都是follwer分区。</p>
-<p>在zk的客户端执行命令 get /brokers/topics/topic0/partitions/0/state  (可以查询主题下的partitions的leader partition(分区)在哪个brock上)</p>
-<figure data-type="image" tabindex="9"><img src="https://gitee.com/yezhaoxin/static/raw/master/images/kafka5.jpg" alt="image" loading="lazy"></figure>
-<figure data-type="image" tabindex="10"><img src="https://upload-images.jianshu.io/upload_images/14890912-05dc8764d0888be9.gif?imageMogr2/auto-orient/strip" alt="image.gif" loading="lazy"></figure>
-<p>&quot;leader&quot;:2  可以看出 p0分区在brock.id=2的服务器上。</p>
-<p>其他的分区leader分布按上面的命令查询到(没有截图出来)。p1分区在brock.id=0的服务器上、p2分区在brock.id=1的服务器上</p>
-<p>leader分区在一图中都标红色了，其他都是follwer。</p>
-<p>分区副本的作用是当leader分区的brock挂了，会在fowller分区上重新选出一个分区作为leader分区，能实现集群容错效果</p>
-<p>leader副本：处理所有的读写请求(只有一个leader，其他的都是follwer)</p>
-<p>follwer副本：不接收任何请求处理，只从leader副本同步消息日志</p>
-<h1 id="副本分配算法">副本分配算法</h1>
-<p>副本是如何分配到brock上的？</p>
-<p>将所有N个Brock和待分配的i个partition排序，将第i个partition分配到第(i%n)个Brock上，将第i个partition的第j个副本分配到第((i+j)%n)个brock上</p>
-<h1 id="kafka高性能原因">kafka高性能原因</h1>
-<h3 id="1消息顺序写入到磁盘">1.消息顺序写入到磁盘</h3>
-<p>将写磁盘的过程变为顺序写，可极大提高对磁盘的利用率。Consumer通过offset顺序消费这些数据</p>
-<h3 id="2零拷贝直接在内核空间将数据拷贝到网卡缓存-减少了用户空间的操作过程">2.零拷贝(直接在内核空间将数据拷贝到网卡缓存。减少了用户空间的操作过程)</h3>
-<h3 id="类似于nio的直接缓冲区减少jvm内存的操作过程">(类似于NIO的直接缓冲区，减少jvm内存的操作过程)</h3>
-<p>消息从发送到落地保存，broker 维护的消息日志本身就是文件目录，每个文件都是二进制保存，生产者和消费者使 用相同的格式来处理。在消费者获取消息时，服务器先从 硬盘读取数据到内存，然后把内存中的数据原封不动的通 过 socket 发送给消费者。虽然这个操作描述起来很简单， 但实际上经历了很多步骤。</p>
-<figure data-type="image" tabindex="11"><img src="https://gitee.com/yezhaoxin/static/raw/master/images/kafka6.jpg" alt="image" loading="lazy"></figure>
-<figure data-type="image" tabindex="12"><img src="https://upload-images.jianshu.io/upload_images/14890912-acbf6128c9e58e2a.gif?imageMogr2/auto-orient/strip" alt="image.gif" loading="lazy"></figure>
-<p>▪ 操作系统将数据从磁盘读入到内核空间的页缓存(Linux内核一种重要的磁盘高速缓存)</p>
-<p>▪ 应用程序将数据从内核空间读入到用户空间缓存中</p>
-<p>▪ 应用程序将数据写回到内核空间到 socket 缓存中</p>
-<p>▪ 操作系统将数据从 socket 缓冲区复制到网卡缓冲区，以便将数据经网络发出</p>
-<p>这个过程涉及到 4 次上下文切换以及 4 次数据复制，并且有两次复制操作是由 CPU 完成。但是这个过程中，第二、三步操作数据完全没有进行变化，仅仅是从磁盘复制到网卡缓冲区。</p>
-<h3 id="通过零拷贝技术可以去掉这些没必要的数据复制操作-同时也会减少上下文切换次数-现代的-unix-操作系统提供-一个优化的代码路径用于将数据从页缓存传输到-socket-在-linux-中是通过-sendfile-系统调用来完成的-java-提-供了访问这个系统调用的方法filechanneltransferto-api">通过“零拷贝”技术，可以去掉这些没必要的数据复制操作， 同时也会减少上下文切换次数。现代的 unix 操作系统提供 一个优化的代码路径，用于将数据从页缓存传输到 socket； 在 Linux 中，是通过 sendfile 系统调用来完成的。Java 提 供了访问这个系统调用的方法：FileChannel.transferTo API</h3>
-<figure data-type="image" tabindex="13"><img src="https://gitee.com/yezhaoxin/static/raw/master/images/kafka7.jpg" alt="image" loading="lazy"></figure>
-<figure data-type="image" tabindex="14"><img src="https://upload-images.jianshu.io/upload_images/14890912-aecc6fe422f56795.gif?imageMogr2/auto-orient/strip" alt="image.gif" loading="lazy"></figure>
-<h3 id="使用-sendfile只需要一次拷贝就行允许操作系统将数据-直接从页缓存发送到网络上-所以在这个优化的路径中-只有最后一步将数据拷贝到网卡缓存中是需要的">使用 sendfile，只需要一次拷贝就行，允许操作系统将数据 直接从页缓存发送到网络上。所以在这个优化的路径中， 只有最后一步将数据拷贝到网卡缓存中是需要的。</h3>
-<hr>
-<h1 id="java-api-kafka配置信息分析">java api kafka配置信息分析</h1>
-<p>producer 配置可选参数</p>
-<h1 id="acks">acks</h1>
-<p>配置表示 producer 发送消息到 broker 上以后的确认值。有三个可选项</p>
-<h3 id="1-acks0表示-producer-不需要等待-broker-的消息确认发出消息那么就认为消息已成功写入kafka时效率高但同时风险最大server-宕机时数据将会丢失">1. acks=0表示 producer 不需要等待 broker 的消息确认，发出消息那么就认为消息已成功写入Kafka，时效率高，但同时风险最大，server 宕机时，数据将会丢失</h3>
-<h3 id="2-acks1-表示-producer-只需要获得-kafka-集群中的-leader-节点确认即可这个选择时延较小同时确保了-leader-节点确认接收成功">2. acks=1 表示 producer 只需要获得 kafka 集群中的 leader 节点确认即可，这个选择时延较小同时确保了 leader 节点确认接收成功</h3>
-<h3 id="3-acksall-leader-节点在返回确认或错误响应之前会等待所有同步副本都收到消息-如果和mininsyncreplicas参数结合起来就可以决定在返回确认前至少有多个副本能够收到消息-比如mininsyncreplicas1就需要至少一个follwer确认收到消息-相对安全但是效率较低-但是由于-isr-可能会缩小到仅包含一个-replica所以设置参数为all并不能一定避免数据丢失">3. acks=all leader 节点在返回确认或错误响应之前，会等待所有同步副本都收到消息。如果和min.insync.replicas参数结合起来，就可以决定在返回确认前至少有多个副本能够收到消息。比如min.insync.replicas=1就需要至少一个follwer确认收到消息。相对安全，但是效率较低。但是由于 ISR 可能会缩小到仅包含一个 Replica，所以设置参数为all并不能一定避免数据丢失</h3>
-<h1 id="batchsize">batch.size</h1>
-<p>生产者发送多个消息到 broker 上的同一个分区时，为了减少网络请求带来的 性能开销，通过批量的方式来提交消息，可以通过这个参数来控制批量提交的 字节数大小，默认大小是 16384byte,也就是 16kb，意味着当一批消息大小达 到指定的 batch.size 的时候会统一发送</p>
-<h1 id="lingerms">linger.ms</h1>
-<p>Producer 默认会把两次发送时间间隔内收集到的所有 Requests 进行一次聚合 然后再发送，以此提高吞吐量，而 linger.ms 就是为每次发送到 broker 的请求 增加一些 delay，以此来聚合更多的 Message 请求。 这个有点想 TCP 里面的 Nagle 算法，在 TCP 协议的传输中，为了减少大量小数据包的发送，采用了 Nagle 算法，也就是基于小包的等-停协议。</p>
-<h3 id="batchsize-和-lingerms-这两个参数是-kafka-性能优化的关键参数当二者都配置的时候只要满足其中一个要-求就会发送请求到-broker-上">batch.size 和 linger.ms 这两个参数是 kafka 性能优化的关键参数当二者都配置的时候，只要满足其中一个要 求，就会发送请求到 broker 上</h3>
-<h1 id="maxrequestsize">max.request.size</h1>
-<p>设置请求的数据的最大字节数，为了防止发生较大的数据包影响到吞吐量，默认值为 1MB</p>
-<p>consumer配置可选参数</p>
-<h1 id="groupid">group.id</h1>
-<p>当producer发送一条消息，相同group.id的多个consumer只有其中一个consumer能消费到</p>
-<p>(比如 topic=hehe的主题发送了一条消息，group.id=666的组，有三个消费者监听了这个主题，但这条消息只会被其中一个consumer消费到)，group.id=999的一个consumer也能消费这条消息。</p>
-<h1 id="enableautocommit">enable.auto.commit</h1>
-<p>消费者消费消息以后自动提交，只有当消息提交以后，该消息才不会被再次接 收到，还可以配合 auto.commit.interval.ms 控制自动提交的频率。 当然，我们也可以通过 consumer.commitSync()的方式实现手动提交</p>
-<h1 id="autooffsetreset">auto.offset.reset</h1>
-<p>这个参数是针对新的 groupid 中的消费者而言的，当有新 groupid 的消费者来 消费指定的 topic 时，对于该参数的配置，会有不同的语义</p>
-<p>auto.offset.reset=latest 情况下，新的消费者将会从其他消费者最后消费的 offset 处开始消费 Topic 下的消息</p>
-<p>auto.offset.reset= earliest 情况下，新的消费者会从该 topic 最早的消息开始 消费</p>
-<p>auto.offset.reset=none 情况下，新的消费者加入以后，由于之前不存在 offset，则会直接抛出异常。</p>
-<h1 id="maxpollrecords">max.poll.records</h1>
-<p>此设置限制每次调用 poll 返回的消息数，这样可以更容易的预测每次 poll 间隔 要处理的最大值。通过调整此值，可以减少 poll 间隔</p>
+        <updated>2023-03-29T08:27:50.000Z</updated>
+        <content type="html"><![CDATA[<blockquote>
+<h3 id="线程池优化方案">线程池优化方案</h3>
+<h5 id="1背景网关开始设计调用下游http服务时使用asynchttpclient是创建一个线程池去异步调用下游http服务创建线程池增加网关资源消耗增加线程开销和cup上下文的切换">1.背景：网关开始设计调用下游http服务时,使用asyncHttpClient是创建一个<code>线程池</code>去异步调用下游http服务，创建线程池增加网关资源消耗，增加线程开销，和cup上下文的切换</h5>
+<h6 id="优化asynchttpclient复用网关服务的work线程池eventloopgroupwork减少线程开锁销对服务器的压力和减少cpu上下文切换qps提升2000">优化：asyncHttpClient复用网关服务的work线程池(eventLoopGroupWork)，减少线程开锁销对服务器的压力和减少cpu上下文切换，QPS提升2000</h6>
+</blockquote>
+<blockquote>
+<h6 id="复用原理是netty会对work线程池进行任务分配一半线程处理本身任务一半处理复用的任务">复用原理：是netty会对work线程池进行任务分配，一半线程处理本身任务，一半处理复用的任务</h6>
+</blockquote>
+<blockquote>
+<h5 id="复用前提是asynchttpclient也是netty开发使用netty的线程池类型">复用前提：是asyncHttpClient也是netty开发，使用netty的线程池类型</h5>
+</blockquote>
+<blockquote>
+<h5 id="2背景使用disruptor高性能队列环形数组存储任务接收到的网关请求并创建一个线程池去消费队列处理任务">2.背景：使用Disruptor高性能队列<code>(环形数组)</code>存储任务<code>(接收到的网关请求)</code>，并创建一个线程池去消费队列处理任务</h5>
+<h5 id="这个设计的初衷是因为disruptor比其他类型的队列性能高在并发处理不过来时能缓存提高性能但是需要另外创建一个线程池去消费队列处理请求增加网关资源消耗增加线程开销和cup上下文的切换">这个设计的初衷是因为Disruptor比其他类型的队列性能高，在并发处理不过来时能缓存提高性能，但是需要另外创建一个线程池去消费队列处理请求，增加网关资源消耗，增加线程开销，和cup上下文的切换。</h5>
+<h5 id="优化去掉disruptor直接使用work线程处理请求因为网关io处理是全异步的已经是纯cpu处理了处理速度很快基本不会缓存大量任务直接使用work线程减少线程开锁销对服务器的压力和减少cpu上下文切换qps提升500-1000">优化：去掉Disruptor，直接使用work线程处理请求，因为网关IO处理是全异步的，已经是纯cpu处理了，处理速度很快，基本不会缓存大量任务，直接使用work线程，减少线程开锁销对服务器的压力和减少cpu上下文切换，QPS提升500-1000</h5>
+</blockquote>
+<blockquote>
+<h3 id="异步处理时注意事项">异步处理时注意事项</h3>
+<h5 id="1异步异常处理">1.异步异常处理</h5>
+<h6 id="异步调用下游如果出现异常要先set到exchange里请求上下文在执行filter链时判断是否有异常再做处理因为异步线程抛出的异常主线程无法捕获到">异步调用下游如果出现异常，要先set到exchange里(请求上下文)，在执行filter链时判断是否有异常再做处理，因为异步线程抛出的异常主线程无法捕获到</h6>
+<h5 id="2异步处理后filterchaindofilter要在oncomplete内调用如果在外面调用未等到当前异步处理完异步回调就执行后面的filter链数据可能会错乱">2.异步处理后filterChain.doFilter()要在onComplete内调用，如果在外面调用，未等到当前异步处理完(异步回调)，就执行后面的Filter链，数据可能会错乱</h5>
+</blockquote>
+<blockquote>
+<h3 id="尽量不强依赖三方框架etcd弱依赖优化">尽量不强依赖三方框架(etcd弱依赖优化)</h3>
+<h5 id="1背景由于对etcd强信任一次etcd出现故障内存使用满后拒绝写入并通知下线所有实例网关接收到下线实例通知把所有实例都从java内存缓存中删除了导致所有请求无求找到实例访问">1.背景：由于对etcd强信任，一次etcd出现故障，内存使用满后拒绝写入，并通知下线所有实例，网关接收到下线实例通知，把所有实例都从java内存缓存中删除了，导致所有请求无求找到实例访问</h5>
+<h5 id="优化1不完全信任etcd弱依赖网到接收到etcd实例下线通知将java缓存中实例进行逻辑删除脏实例等到有一台实例上线就会清空脏实例只要有一台正常实例就可以清空脏实例-脏实例的作用是比如业务方集群有3台实例请求时会先查询正常的实现如果没有正常实例就会使用脏实例即使收到etcd所有服务下线通知还能使用脏实例防止错误删除导致访问不到业务服务">优化1：不完全信任etcd(弱依赖)，网到接收到etcd实例下线通知，将java缓存中实例进行逻辑删除(脏实例)，等到有一台实例上线，就会清空脏实例(只要有一台正常实例，就可以清空脏实例)。脏实例的作用是：比如业务方集群有3台实例，请求时会先查询正常的实现，如果没有正常实例，就会使用脏实例，即使收到etcd所有服务下线通知，还能使用脏实例(防止错误删除导致访问不到业务服务)。</h5>
+<h5 id="优化2使用etcd本地文件保存注册信息当etcd不可用时读取本地文件注册节点信息到jvm内存中">优化2:使用etcd+本地文件保存注册信息，当etcd不可用时，读取本地文件注册节点信息到jvm内存中</h5>
+</blockquote>
+<p>etcd 调优 快照最大压缩2g，因态硬盘，保存7天</p>
+<blockquote>
+<h4 id="在conditionrouteprefilter条件路由使用collectionssort对arraylist存储condition信息排序时抛出javautilconcurrentmodificationexception异常">在ConditionRoutePreFilter(条件路由)使用Collections.sort对ArrayList(存储Condition信息)排序时抛出java.util.ConcurrentModificationException异常</h4>
+<h4 id="原因route信息是共享内存的collectionssort是线程不安全的多个线程同时请求这个route进行排序会使得modcount冲突抛出javautilconcurrentmodificationexception异常">原因：route信息是共享内存的，Collections.sort是线程不安全的，多个线程同时请求这个route进行排序会使得modCount冲突，抛出java.util.ConcurrentModificationException异常</h4>
+<figure data-type="image" tabindex="1"><img src="https://gitee.com/yezhaoxin/static/raw/master/images/rivers01.jpg" alt="image.png" loading="lazy"></figure>
+</blockquote>
+<blockquote>
+<h3 id="网关使用到的设计模式">网关使用到的设计模式</h3>
+<p>责任链，装饰者，模板方法，工厂，单例</p>
+</blockquote>
+<blockquote>
+<h3 id="网关filter插件">网关filter插件</h3>
+<p>1.用户认证(AuthPreFilter)<br>
+2.断路器(CircuitBreakerPreFilter)<br>
+3.条件路由(ConditionRoutePreFilter)<br>
+4.跨域资源共享(CrossDomainPreFilter)<br>
+5.IP黑白名单(IpBlackWhitePreFilter)<br>
+6.负载均衡策略(LoadBalancePreFilter)<br>
+7.参数校验(ParameterVerifyPreFilter)<br>
+8.代理转发(ProxyForwardPreFilter)<br>
+9.分布式限流(RateLimiterPreFilter)<br>
+10.路径重写(RewritePathPreFilter)<br>
+11.标签路由(TagRouterPreFilter)<br>
+12.超时设置(TimeoutPreFilter)</p>
+</blockquote>
 ]]></content>
     </entry>
     <entry>
-        <title type="html"><![CDATA[Hello Gridea]]></title>
-        <id>https://yzx2018.github.io/mypage/post/hello-gridea/</id>
-        <link href="https://yzx2018.github.io/mypage/post/hello-gridea/">
+        <title type="html"><![CDATA[分布式锁(redis和zookeeper)]]></title>
+        <id>https://yzx2018.github.io/mypage/post/fen-bu-shi-suo-redis-he-zookeeper/</id>
+        <link href="https://yzx2018.github.io/mypage/post/fen-bu-shi-suo-redis-he-zookeeper/">
         </link>
-        <updated>2018-12-11T16:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p>👏  欢迎使用 <strong>Gridea</strong> ！<br>
-✍️  <strong>Gridea</strong> 一个静态博客写作客户端。你可以用它来记录你的生活、心情、知识、笔记、创意... ...</p>
-]]></summary>
-        <content type="html"><![CDATA[<p>👏  欢迎使用 <strong>Gridea</strong> ！<br>
-✍️  <strong>Gridea</strong> 一个静态博客写作客户端。你可以用它来记录你的生活、心情、知识、笔记、创意... ...</p>
-<!-- more -->
-<p><a href="https://github.com/getgridea/gridea">Github</a><br>
-<a href="https://gridea.dev/">Gridea 主页</a><br>
-<a href="https://fehey.com/">示例网站</a></p>
-<h2 id="特性">特性👇</h2>
-<p>📝  你可以使用最酷的 <strong>Markdown</strong> 语法，进行快速创作</p>
-<p>🌉  你可以给文章配上精美的封面图和在文章任意位置插入图片</p>
-<p>🏷️  你可以对文章进行标签分组</p>
-<p>📋  你可以自定义菜单，甚至可以创建外部链接菜单</p>
-<p>💻  你可以在 <strong>Windows</strong>，<strong>MacOS</strong> 或 <strong>Linux</strong> 设备上使用此客户端</p>
-<p>🌎  你可以使用 <strong>𝖦𝗂𝗍𝗁𝗎𝖻 𝖯𝖺𝗀𝖾𝗌</strong> 或 <strong>Coding Pages</strong> 向世界展示，未来将支持更多平台</p>
-<p>💬  你可以进行简单的配置，接入 <a href="https://github.com/gitalk/gitalk">Gitalk</a> 或 <a href="https://github.com/SukkaW/DisqusJS">DisqusJS</a> 评论系统</p>
-<p>🇬🇧  你可以使用<strong>中文简体</strong>或<strong>英语</strong></p>
-<p>🌁  你可以任意使用应用内默认主题或任意第三方主题，强大的主题自定义能力</p>
-<p>🖥  你可以自定义源文件夹，利用 OneDrive、百度网盘、iCloud、Dropbox 等进行多设备同步</p>
-<p>🌱 当然 <strong>Gridea</strong> 还很年轻，有很多不足，但请相信，它会不停向前 🏃</p>
-<p>未来，它一定会成为你离不开的伙伴</p>
-<p>尽情发挥你的才华吧！</p>
-<p>😘 Enjoy~</p>
+        <updated>2021-01-02T08:26:50.000Z</updated>
+        <content type="html"><![CDATA[<blockquote>
+<h4 id="zookerper分布式锁">zookerper分布式锁</h4>
+<h6 id="zk实现分布式锁原理使用zk临时节点连接断开后就会删除-事件通知wacther">zk实现分布式锁原理：使用zk临时节点(连接断开后就会删除) +事件通知(wacther)</h6>
+<p>a)使用zk创建临时节点<br>
+b)哪个服务器能创建节点成功，相当于就拿到锁，用完之后关闭zk连接就会自动删除节点（释放锁）<br>
+c)没拿到锁的服务器就等待，使用wacther监听节点(节点被删除就收到通知)，收到节点删除通知就去获取锁的资源<br>
+这种方式<br>
+缺点：所有取锁失败的进程都监听父节点，很容易发生羊群效应(即当释放锁后所有等待进程一起来创建节点，并发量很大)。</p>
+<h5 id="zk-锁优化临时有序节点实现">ZK 锁优化(临时有序节点实现)</h5>
+<p>原理：上锁改为创建临时有序节点(01、02...)，每个上锁的节点均能创建节点成功，只是其序号不同。只有序号最小的可以拥有锁，如果这个节点序号不是最小的则 watch监听序号比本身小的前一个节点，当请求释放锁时，只有被删除节点(01)的下一个节点(02)去获取 (其他节点相当于排队，公平锁)。<br>
+步骤：<br>
+1.在 /lock 节点下创建一个有序临时节点 (EPHEMERAL_SEQUENTIAL),zk会生成有序的节点。<br>
+2.判断创建的节点序号是否最小，如果是最小则获取锁成功。不是则取锁失败，然后其他节点 watch(监听) 序号比本身小的前一个节点。<br>
+3.当获取锁成功则执行代码，释放锁（删除该节点）后，下一个节点就会收到通知，然后去获取锁，其他排在后面的节点继续等待(公平锁)</p>
+<h3 id="如何避免zk客户端使用分布式锁的服务死锁问题">如何避免zk客户端(使用分布式锁的服务)死锁问题</h3>
+<h6 id="azkserver端宕机一直接收不到watch删除节点的通知">a)zkServer端宕机，一直接收不到watch删除节点的通知</h6>
+<p>1.获取锁等待时设置阻塞的超时时间<br>
+2.通过监听zk宕机之后，主动唤醒</p>
+<h6 id="bzk客户端使用锁的服务宕机">b)zk客户端(使用锁的服务)宕机</h6>
+<p>zk先天性特性避免死锁问题，断开连接后主动释放锁(临时节点被删除)</p>
+<h6 id="c获取到锁的jvm一直不释放锁">c)获取到锁的jvm一直不释放锁</h6>
+<p>(类似于redis看门狗 watchdog)获取锁时记录锁信息(锁id,线程,事务,锁状态等)，开始一个定时线程给锁续期，续期3次还没处理完业务，就主动释放锁，事务随之回滚</p>
+<h3 id="zookeeper锁的实现框架curator">zookeeper锁的实现框架curator</h3>
+</blockquote>
+<hr>
+<blockquote>
+<h4 id="redis分布式锁">redis分布式锁</h4>
+<h6 id="redis实现分布式锁原理使用setnx实现分布式锁">redis实现分布式锁原理：使用setnx实现分布式锁</h6>
+<p>a)获取锁：多个jvm同时setnx，最终只有一个jvm成功<br>
+b)释放锁:删除该key(获取时value设置唯一id，删除时判断同一id才删除)<br>
+#####redis锁的实现框架redisson，解决续期等问题<br>
+a)获取锁：使用lua脚本创建hash key(记录线程，锁id等信息,value为1(实现可重入锁)，默认锁时间30s<br>
+b)释放锁：删除该key<br>
+c)锁续命设计：注册监听watchdog(看门狗)，默认每隔10s续期，重置锁的过期时间(默认30s)，防止业务未执行完就过期，续期多次未释放锁就会主动释放</p>
+<h4 id="如何避免客户端死锁问题">如何避免客户端死锁问题</h4>
+<p>a)设置过期key<br>
+b)限制续命次数，超过就主动释放锁并回滚事务</p>
+<h4 id="key过期了但是业务还没有执行完毕如何处理">key过期了，但是业务还没有执行完毕如何处理</h4>
+<p>redisson实现了watchdog机制，获取锁后创建一个定时线程，默认每隔10s续期一次，重置锁的过期时间，续期3次就还未释放，就会主动释放锁，并回滚事务</p>
+<h4 id="redis集群主节点宕机了如何处理">redis集群，主节点宕机了如何处理？</h4>
+<h5 id="因为redis使用ap同步数据时是异步的主节点挂了从节点变成主节点可能获取锁的key未同步过来就会造成多个jvm获取到锁的情况">因为redis使用ap，同步数据时是异步的，主节点挂了，从节点变成主节点，可能获取锁的key未同步过来，就会造成多个jvm获取到锁的情况</h5>
+<h5 id="解决方案">解决方案：</h5>
+<p>使用RedLock红锁算法(类似zk)，实现原理<br>
+1.redis集群没有主从之分<br>
+2.客户端获取锁时对多个redis节点<code>循环</code>进行setnx操作，满足一半以上返回成功，是获取锁成功<br>
+3.注意循环对redis进行获取锁时，总耗时时间不能大于key的过期时间。如果耗时大于key的过期时间，返回获取锁失败，并删除之前创建成功的key</p>
+</blockquote>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[分布式事务LCN与Seata原理]]></title>
+        <id>https://yzx2018.github.io/mypage/post/fen-bu-shi-shi-wu-lcn-yu-seata-yuan-li/</id>
+        <link href="https://yzx2018.github.io/mypage/post/fen-bu-shi-shi-wu-lcn-yu-seata-yuan-li/">
+        </link>
+        <updated>2020-12-17T08:25:17.000Z</updated>
+        <content type="html"><![CDATA[<blockquote>
+<p>LCN和Seata原理图<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1LCN%E4%B8%8ESeata%E5%8E%9F%E7%90%86-1.jpg" alt="image.png" loading="lazy"></p>
+<blockquote>
+<h3 id="lcn不生产事务只是事务的协调者-lcn-核心采用3pc">LCN:不生产事务，只是事务的协调者   LCN 核心采用3PC</h3>
+<p>原理：<br>
+1.发起方(如支付服务)执行业务时，会通过aop拦截@LcnTransaction注解，会生成一个事务组ID,保存到ThreadLocal，然后通过netty传递给tx-manager(事务协调者)创建一个事务分组<br>
+2执行业务代码，在调用其他服务接口(如订单服务)的时候，会把事务组ID存放到Http请求头传给参与方(订单服务)<br>
+3.参与方在Http请求头上收到分组id的时候，执行完业务不会提交事务，而是监听tx-manager(加入当前事务组)<br>
+4.发起方代码执行完后，通知给tx-manager是提交还是回滚，然后tx-manager通知给参与方做事务处理</p>
+</blockquote>
+<blockquote>
+<h3 id="seata">Seata</h3>
+<p>角色：Transaction Coordinator 事务协调器、Transaction Manager 事务管理者、Resource Manager 资源管理器</p>
+</blockquote>
+<blockquote>
+<h5 id="原理-tm和rm都会被seate代理数据源">原理  TM和RM都会被seate代理数据源</h5>
+<p>1.TM(如支付服务)执行业务时，会通过aop拦截@GlobalTransactional注解，会先查询ThreadLocal是否有XID，如果没有(表示TM)，会请求TC创建一个XID，获取到XID，保存到ThreadLocal<br>
+2.在调用其他服务接口(如订单服务)的时候，会把XID存放到Http请求头传给RM(订单服务)<br>
+3.RM从请求头上获取到XID,会保存到Threadlocal，并且向TC注册事务分支<br>
+4.RM操作sql前，会记录前置镜像到undo_log表，然后执行sql，成功后再记录后置镜像到undo_log表(记录undo_log和执行业务sql是同一事务)，然后提交事务<br>
+5.TM调用RM返回，继续执行业务，如果异常，通知TC，然后TC通知所有事务分支进行回滚<br>
+6.RM收到回滚通知，会执行后置镜像sql，将数据还原，然后删除当前XID中undo_log的镜像记录<br>
+7.如果成功，通知TC，然后TC通知所有事务分支<br>
+8..RM收到成功通知，删除当前XID中undo_log的镜像记录</p>
+</blockquote>
+</blockquote>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[zookeeper的zab协议与Nacos的Raft协议]]></title>
+        <id>https://yzx2018.github.io/mypage/post/zookeeper-de-zab-xie-yi-yu-nacos-de-raft-xie-yi/</id>
+        <link href="https://yzx2018.github.io/mypage/post/zookeeper-de-zab-xie-yi-yu-nacos-de-raft-xie-yi/">
+        </link>
+        <updated>2019-08-23T08:23:15.000Z</updated>
+        <content type="html"><![CDATA[<blockquote>
+<p>zab一致性算法原理，以zookeeper为例<br>
+zab原子广播协议中 两种模式<br>
+1.恢复模式：Leader宕机后选举新Leader<br>
+2.广播模式：解决每个节点数据同步问题<br>
+ZK每个节点都有myid(手动配置)和zxid(自动生成，默认为0)</p>
+</blockquote>
+<blockquote>
+<p>zab类似paxos，但zab在生成全局zxid时会使用锁保存zxid线程安全</p>
+<h5 id="zk同步原理">zk同步原理</h5>
+<p>Leader节点会生成全局zxid，然后通过两段提交协议进行同步<br>
+1.第一阶段同步，带上zxid请求每个follower节点是否可以允许同步数据<br>
+2.Leader节点接收到半数以上的节点可以同步,Leader节点就会开始给Follower进行同步数据</p>
+</blockquote>
+<blockquote>
+<h5 id="zk选举底层实现原理">ZK选举底层实现原理：</h5>
+<p>1.先检查zxid，谁最大，谁就为Leader，因为zxid越大表示当前节点数据越新<br>
+2.如果zxid都一样的情况，myid最大的为leader</p>
+</blockquote>
+<p>备注：zk的Observer(特殊的follower，只读，只监听同步，不参与投票选举(扩容时不影响本身选举的时候效率，能提高查询性能)</p>
+<hr>
+<h4 id="raft协议">Raft协议</h4>
+<blockquote>
+<p>在Raft协议算法上角色有跟随者(不竞选领导角色)、竞选者(候选人)、领导角色<br>
+选举票数满足半数以上就会成为领导角色</p>
+<h4 id="选举过程">选举过程：</h4>
+<p>默认情况下每个节点都为跟随者，每个节点会随机生成一个超时时间，大概100-300ms，超时时间这后，当前节点的状态就会由跟随者变为竞选者，会给其他节点发出选举投票通知，只要竞选者有超过半数以上的票，就成为领导角色<br>
+所以节点的超时时间最短，最有可能成为领导角色</p>
+<h4 id="故障选举过程">故障选举过程</h4>
+<p>如果某跟随者节点不能及时收到领导角色的消息(心跳检测)，那么这个跟随者状态就会变为竞选者状态，给其他节点发出选举投票通知，其他节点确认领导角色挂了，就会进行投票，竞选者超过半数以上即可选举为领导角色</p>
+<h4 id="raft采用日志复制形式同步数据">Raft采用日志复制形式同步数据</h4>
+<p>1.所有的写请求都是统一交给领导角色完成，会写入对应的日志，标记该状态为提交状态。<br>
+2.领导角色将日志以心跳的形式发送其他的跟随者，只要满足过半的跟随者可以写入数据，则直接通知其他节点同步该数据，这个称为日志复制</p>
+</blockquote>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[JDK1.8HashMap以及ConcurrentHashMap源码分析]]></title>
+        <id>https://yzx2018.github.io/mypage/post/jdk18hashmap-yi-ji-concurrenthashmap-yuan-ma-fen-xi/</id>
+        <link href="https://yzx2018.github.io/mypage/post/jdk18hashmap-yi-ji-concurrenthashmap-yuan-ma-fen-xi/">
+        </link>
+        <updated>2019-08-23T08:22:22.000Z</updated>
+        <content type="html"><![CDATA[<p>#HashMap源码分析<br>
+#####分析源码之前，先了解一下HashMap的结构，JDK1.7之前HashMap是通过数组结构+单向链表的结构存储的   (Node&lt;K,V&gt;[ ])，JDK1.8加入了数组结构+单向链表+红黑数  (当链表长度达到8时，就会采用红黑树来存储)<br>
+#####通过Node&lt;K,V&gt;对象(可实现链表结构的对象)来封装map属性(hash,k,v,next)</p>
+<pre><code>static class Node&lt;K,V&gt; implements Map.Entry&lt;K,V&gt; {
+        final int hash;  // 当前元素key的hash值
+        final K key;    // 当前元素key值
+        V value;        // 当前元素的value值
+        Node&lt;K,V&gt; next;  // 当前对象(节点)的下一个存储的元素节点
+
+        Node(int hash, K key, V value, Node&lt;K,V&gt; next) {
+            this.hash = hash;
+            this.key = key;
+            this.value = value;
+            this.next = next;
+        }
+......
+    }
+</code></pre>
+<blockquote>
+<p>######HashMap的存储如下图，默认会初始化一个Entry&lt;K,V&gt;[] tab = new Node[16]大小为16的entry数组，所以数组有16个index索引位置(0-15)，元素存放到哪个索引是通过key的hash值%数组长度-1(key的hash%15)计算出来的，当我们map.put(&quot;a&quot;,&quot;97&quot;);时，假设a的hash值%数组长度-1计算出来的结果为1(假设结果为1)，那么这个元素就会被封装成Entry对象(JDK1.8实现类为上面的Node)存放到数组index为1的索引上<br>
+<img src="C:/Users/PC/Pictures/Saved%20Pictures/JDK1.8HashMap%E4%BB%A5%E5%8F%8AConcurrentHashMap%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-1.jpg" alt="image.png" loading="lazy"><br>
+######那么问题来了，如果元素索引的索引位置一样，是如何处理的,比如map.put(&quot;b&quot;,&quot;100&quot;);  key为b的索引计算出来也是1，那么是如何存放的?(这就是HashMap的哈希冲突问题)<br>
+######通过链表存储方式解决哈希冲突问题,这时会先生成&quot;b&quot;,&quot;100&quot;的entry对象(b)，然后index下的a对象赋值的a.next=b  (新的元素加入到链表最后一个位置)<br>
+<img src="C:/Users/PC/Pictures/Saved%20Pictures/JDK1.8HashMap%E4%BB%A5%E5%8F%8AConcurrentHashMap%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-2.jpg" alt="image.png" loading="lazy"></p>
+</blockquote>
+<blockquote>
+<p>######以上就是HashMap通过数组+链表(由entry对象组成)的方式存储元素<br>
+######当获取元素时，比如map.get(&quot;a&quot;)，会计算出a的index为1，然后找到这个位置的entry对象,通过对比key是否相同，如果不相同，则获取entry.next的key继续比较，直到找出这个key对应的entry<br>
+######比如上面的例子存储了a和b，那么map.get(&quot;a&quot;)时，获取到index为1的entry为b对象，此时entry.key <mark>b !=a，就会拿entry.next的entry对象继续比较，发现entry.next.key</mark>a，那么就返回entry.next.value<br>
+写个查询的伪代码来理解</p>
+</blockquote>
+<pre><code>for(Entry&lt;K,V&gt; e =tab[1]; e!=null; e = e.next){
+    if(e.getKey()==&quot;a&quot;){
+      return e.getValue();
+    }
+  return null;
+}
+</code></pre>
+<blockquote>
+<p>######HashMap通过entry[]数组，存储在index下的entry通过java对象的引用(next实现链表结构)，来实现于存放了多个元素<br>
+#####分析HashMap的无参构造方法</p>
+</blockquote>
+<pre><code>public HashMap() {
+        
+        transient Node&lt;K,V&gt;[] table;  //这个HashMap的存储容器  Node是entry的实现
+        static final float DEFAULT_LOAD_FACTOR = 0.75f;  // 对扩容大小进行计算
+        int threshold; // 当元素size大于threshold才进行扩容
+        this.loadFactor = DEFAULT_LOAD_FACTOR; // all other fields defaulted
+    }
+</code></pre>
+<p>HashMap的无参构造方法只设置了负载因子为0.75(后面讲到作用)，没有对table进行任何处理，HashMap无参构造方法创建map后，table的初始化是在第一次put时进行的</p>
+<p>#####分析HashMap的put方法</p>
+<pre><code>// put方法
+public V put(K key, V value) {
+        return putVal(hash(key), key, value, false, true);
+    }
+// 对key进行hash计算
+static final int hash(Object key) {
+        int h;
+        return (key == null) ? 0 : (h = key.hashCode()) ^ (h &gt;&gt;&gt; 16);
+    }
+
+// 执行添加元素操作
+final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
+                   boolean evict) {
+        // tab是map容器， p当前key计算出index下的node节点，n是容器数组的大小，i是当前key计算出来的index
+        Node&lt;K,V&gt;[] tab; Node&lt;K,V&gt; p; int n, i;
+        // 判断当前容器是否为null或者容量大小为0
+        if ((tab = table) == null || (n = tab.length) == 0)
+            // 对map容量进行初始化(第一次扩容到16)  (扩容)
+            n = (tab = resize()).length;
+        // (n - 1) &amp; hash，15&amp;hash，奇数计算可减少index重复率，是为了减少hash冲突
+        // 如果当前index下没有node，直接封装当前key的node对象存放到tab[i]下
+        if ((p = tab[i = (n - 1) &amp; hash]) == null)
+            tab[i] = newNode(hash, key, value, null);
+        else {
+            Node&lt;K,V&gt; e; K k;
+            // 如果是同一个key，就修改value
+            if (p.hash == hash &amp;&amp;
+                ((k = p.key) == key || (key != null &amp;&amp; key.equals(k))))
+                e = p;
+            else if (p instanceof TreeNode)    // 这里使用了红黑树，后面再分析
+                e = ((TreeNode&lt;K,V&gt;)p).putTreeVal(this, tab, hash, key, value);
+            else {
+              // 不是同一个key
+                for (int binCount = 0; ; ++binCount) {  //相当于while循环
+                    if ((e = p.next) == null) {
+                    // 将当前key的node节点关联对应index位置的node的next节点下
+                        p.next = newNode(hash, key, value, null);
+                        if (binCount &gt;= TREEIFY_THRESHOLD - 1) 
+// TREEIFY_THRESHOLD = 8，当循环8次时，说明链表长度达到了8，这时使用红黑树存储   后面再分析红黑树
+                            treeifyBin(tab, hash);
+                        break;
+                    }
+                    if (e.hash == hash &amp;&amp;
+                        ((k = e.key) == key || (key != null &amp;&amp; key.equals(k))))
+                        break;
+                    p = e;
+                }
+            }
+            if (e != null) { // existing mapping for key
+                V oldValue = e.value;
+                if (!onlyIfAbsent || oldValue == null)
+                    e.value = value;
+                afterNodeAccess(e);
+                return oldValue;
+            }
+        }
+        ++modCount;
+        if (++size &gt; threshold)
+            resize();
+        afterNodeInsertion(evict);
+        return null;
+    }
+</code></pre>
+<h2 id="hashmap的put方法第一次put时会初始化容器大小为16put时先计算出key的hash然后通过tablength-1hash计算出这个元素将要存放的index位置然后找出index下的node节点如果nodekey和当前key相同就修改value值如果不同就生成这个key的node节点对象然后将这个节点存入链表的最后一个位置index下的node节点遍历判断nodenextnull就可找出最后一个节点然后把最后一个节点赋值next需要增加的key的node节点">######HashMap的put方法，第一次put时会初始化容器大小为16，put时，先计算出key的hash，然后通过(tab.length-1)&amp;hash计算出这个元素将要存放的index位置，然后找出index下的node节点，如果node.key和当前key相同，就修改value值，如果不同就生成这个key的node节点对象，然后将这个节点存入链表的最后一个位置(index下的node节点遍历判断node.next==null，就可找出最后一个节点，然后把最后一个节点赋值next=需要增加的key的node节点)</h2>
+<p>#####分析HashMap的get方法</p>
+<pre><code>public V get(Object key) {
+        Node&lt;K,V&gt; e;
+        return (e = getNode(hash(key), key)) == null ? null : e.value;
+    }
+
+final Node&lt;K,V&gt; getNode(int hash, Object key) {
+        Node&lt;K,V&gt;[] tab; Node&lt;K,V&gt; first, e; int n; K k;
+        // 如果map容器为为null或size为0，直接返回null
+        if ((tab = table) != null &amp;&amp; (n = tab.length) &gt; 0 &amp;&amp;
+            (first = tab[(n - 1) &amp; hash]) != null) {
+            // 如果是第一个节点，返回first
+            if (first.hash == hash &amp;&amp; // always check first node
+                ((k = first.key) == key || (key != null &amp;&amp; key.equals(k))))
+                return first;
+            if ((e = first.next) != null) {
+                if (first instanceof TreeNode)
+                    return ((TreeNode&lt;K,V&gt;)first).getTreeNode(hash, key);
+                do {
+                  // 遍历链表节点找出对应key的node          从first的node开始找，通过node.next.next.....进行查询
+                    if (e.hash == hash &amp;&amp;
+                        ((k = e.key) == key || (key != null &amp;&amp; key.equals(k))))
+                        return e;
+                } while ((e = e.next) != null);
+            }
+        }
+        return null;
+    }
+</code></pre>
+<h2 id="hashmap的get方法会先计算出需要查询key的index位置找出这个链表从第一个node节点开始遍历-nodenextnext找出对应的node节点然后得到nodevalue返回结果">######HashMap的get方法会先计算出需要查询key的index位置，找出这个链表，从第一个node节点开始遍历  node.next.next.....找出对应的node节点然后得到node.value返回结果</h2>
+<p>#####分析HashMap的remove方法<br>
+######remove方法这里不就粘贴源码了，是先通过数组的方式找出链表(由多个node节点对象组成)，然后遍历找到需要删除的node，这个需要删除node的上一个node关联的next赋值为需要删除node的node.next(相当于node.prev.next = node.next)  (类似于上一遍讲到的LinkedList元素的删除，区别在于map用的是单向链表，没有prev节点，需要遍历时用变量存放prev节点)<br>
+只要理解我上面画的HashMap存放元素的结构，HashMap的原理就好理解了，通过数组来存放链表(由node对象通过属性引用next组成链表)，链表中的每个node节点存储key和value</p>
+<hr>
+<p>#分析HashMap的扩容<br>
+#####通过java.util.HashMap#resize方法进行扩容操作的，分析new HashMap()，第一次put进行扩容处理以及之后是如何扩容的</p>
+<pre><code>final Node&lt;K,V&gt;[] resize() {
+        
+        Node&lt;K,V&gt;[] oldTab = table;
+        // 第一次put时，oldCap为0
+        int oldCap = (oldTab == null) ? 0 : oldTab.length;
+       // threshold为0，执行完第一次扩容后，threshold=12，看下面的代码
+        int oldThr = threshold;
+        int newCap, newThr = 0;
+      // 第二次扩容  当if (++size &gt; threshold) 进行扩容
+        if (oldCap &gt; 0) {
+            // MAXIMUM_CAPACITY = 1 &lt;&lt; 30;，正常来说都不会大于2的30次方
+            if (oldCap &gt;= MAXIMUM_CAPACITY) {
+                threshold = Integer.MAX_VALUE;
+                return oldTab;
+            }
+            // 第二次进来当++size &gt; threshold 也就是 threshold= 12 当size=12时，就会进行第二次扩容
+             // newCap = oldCap &lt;&lt; 1  新的容量为旧容器的的2倍    newCap = 16*2 = 32
+             else if ((newCap = oldCap &lt;&lt; 1) &lt; MAXIMUM_CAPACITY &amp;&amp;
+                     oldCap &gt;= DEFAULT_INITIAL_CAPACITY)
+                // newThr  为原来的2倍   12*2 = 24  也就是threshold为24，下一次扩容是++size&gt;24时
+                newThr = oldThr &lt;&lt; 1; // double threshold
+        }
+        else if (oldThr &gt; 0) // initial capacity was placed in threshold
+            newCap = oldThr;
+        // 容器为0时，第一次扩容，会走到这里
+        else {               // DEFAULT_INITIAL_CAPACITY = 1 &lt;&lt; 4;  2的4次方=16
+            newCap = DEFAULT_INITIAL_CAPACITY;  // 默认容量设置为16
+            newThr = (int)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);  16*0.75 = 12;
+        }
+        if (newThr == 0) {
+            float ft = (float)newCap * loadFactor;
+            newThr = (newCap &lt; MAXIMUM_CAPACITY &amp;&amp; ft &lt; (float)MAXIMUM_CAPACITY ?
+                      (int)ft : Integer.MAX_VALUE);
+        }
+        threshold = newThr;   // 第一次扩容， threshold为12
+        // 进行扩容操作，就是生成新的Node&lt;K,V&gt;[]，然后重新计算旧Node&lt;K,V&gt;[]中元素的index，放到新Node&lt;K,V&gt;[]中
+        Node&lt;K,V&gt;[] newTab = (Node&lt;K,V&gt;[])new Node[newCap];
+        table = newTab;
+        if (oldTab != null) {
+            for (int j = 0; j &lt; oldCap; ++j) {
+                Node&lt;K,V&gt; e;
+                if ((e = oldTab[j]) != null) {
+                    oldTab[j] = null;
+                    if (e.next == null)
+                        newTab[e.hash &amp; (newCap - 1)] = e;
+                    else if (e instanceof TreeNode)
+                        ((TreeNode&lt;K,V&gt;)e).split(this, newTab, j, oldCap);
+                    else { // preserve order
+                        Node&lt;K,V&gt; loHead = null, loTail = null;
+                        Node&lt;K,V&gt; hiHead = null, hiTail = null;
+                        Node&lt;K,V&gt; next;
+                        do {
+                            next = e.next;
+                            if ((e.hash &amp; oldCap) == 0) {
+                                if (loTail == null)
+                                    loHead = e;
+                                else
+                                    loTail.next = e;
+                                loTail = e;
+                            }
+                            else {
+                                if (hiTail == null)
+                                    hiHead = e;
+                                else
+                                    hiTail.next = e;
+                                hiTail = e;
+                            }
+                        } while ((e = next) != null);
+                        if (loTail != null) {
+                            loTail.next = null;
+                            newTab[j] = loHead;
+                        }
+                        if (hiTail != null) {
+                            hiTail.next = null;
+                            newTab[j + oldCap] = hiHead;
+                        }
+                    }
+                }
+            }
+        }
+        return newTab;
+    }
+</code></pre>
+<blockquote>
+<p>#####扩容分析<br>
+######首先需要源码上的几个属性的作用<br>
+static final float DEFAULT_LOAD_FACTOR = 0.75f;  // 负载因子，用于计算扩容的阈值，当容器的size达到多少时进行扩容<br>
+nt threshold;  //扩容的阈值， 当size达到这个值是，会进行扩容操作，当++size&gt;threshold时<br>
+######当new HashMap()初始化容器为空，第一次put添加元素时，会将容器扩容到默认大小16，然后threshold = 16<em>0.75 = 12。当size达到threshold(12)时，会进行扩容，扩容大小为原来的2倍，也就是16</em>2=32，threshold = 32*0.75 = 24。之后每次size达到threshold时，都会扩容2倍。<br>
+#####扩容时会生成一个新的Node&lt;K,V&gt;[]数组，循环遍历oldTab，重新oldTab每个元素的index，然后存放到新的数组中</p>
+</blockquote>
+<blockquote>
+<p>#####为什么负载因子大小是0.75?<br>
+######这是一个经过多次测试得到的合理值，能让hash冲突减小，并且index空间利用率高的一个合理的值。<br>
+######假设将负载因子设置为1(比0.75大)，这时容器第二次扩容需要达到size=16时才进行扩容(之后需要达到更大才扩容)，这就使得hash碰撞冲突的概率变大，因为index位置不变,需要添加更多的元素才进行扩容(可以理解成原来12个元素可以有16个位置选择，现在16个元素也只有16个位置选择)，hash碰撞冲突概率就变大了。但是空间的利用率也提高了<br>
+######再假设将负载因子设置为0.5(比0.75小)，这时容器第二次扩容只需要达到16*0.5=8时就进行扩容了，虽然hash碰撞冲突概率变小了，但扩容更加频繁了(扩容时会降低效率)。但是空间的利用率也降低了(可理解成8个人占16个位置)。<br>
+#####负载因子大小是0.75是一个减少hash冲突，增大空间利用率的合理值。<br>
+#####负载因子越大，扩容次数减少，空间利用率提高，但hash冲突的概率也变大<br>
+#####负载因子越小，扩容次数增加，hash冲突的概率减小，但空间利用率下降</p>
+</blockquote>
+<blockquote>
+<p>#JDK8HashMap中的红黑树分析<br>
+#####上面提到的结构都是数组+链表，没到体现到红黑树，那么HashMap在什么情况下会使用红黑树来存放元素？<br>
+#####当链表长度&gt;8，并且数组长度&gt;64的情况下，就会将整个链表转换成红黑树结构，如果链表长度&gt;8，但是数组长度小于64，那么只对数组进行扩容<br>
+#####当红黑树元素小于6时，又会把红黑树变回成链表<br>
+下面分析put时，当hash冲突过大，index中链表长度大于8时,并且数组长度&gt;64，会把链表变成红黑树结构的验证</p>
+</blockquote>
+<pre><code>public V put(K key, V value) {
+        return putVal(hash(key), key, value, false, true);
+    }
+final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
+                   boolean evict) {
+        Node&lt;K,V&gt;[] tab; Node&lt;K,V&gt; p; int n, i;
+        if ((tab = table) == null || (n = tab.length) == 0)
+            n = (tab = resize()).length;
+        if ((p = tab[i = (n - 1) &amp; hash]) == null)
+            tab[i] = newNode(hash, key, value, null);
+        else {
+            Node&lt;K,V&gt; e; K k;
+            if (p.hash == hash &amp;&amp;
+                ((k = p.key) == key || (key != null &amp;&amp; key.equals(k))))
+                e = p;
+            else if (p instanceof TreeNode)
+                e = ((TreeNode&lt;K,V&gt;)p).putTreeVal(this, tab, hash, key, value);
+            else {
+                for (int binCount = 0; ; ++binCount) {
+                    if ((e = p.next) == null) {
+                        p.next = newNode(hash, key, value, null);
+// TREEIFY_THRESHOLD  = 8。当循环8次,p.next都不为空，表示链表长度大于8，会进入treeifyBin(tab, hash)方法
+                        if (binCount &gt;= TREEIFY_THRESHOLD - 1) 
+                            treeifyBin(tab, hash);
+                        break;
+                    }
+                    if (e.hash == hash &amp;&amp;
+                        ((k = e.key) == key || (key != null &amp;&amp; key.equals(k))))
+                        break;
+                    p = e;
+                }
+            }
+   ......
+        }
+ ......
+    }
+
+final void treeifyBin(Node&lt;K,V&gt;[] tab, int hash) {
+        int n, index; Node&lt;K,V&gt; e;
+    // MIN_TREEIFY_CAPACITY = 64  当数组长度小于64时，只进行resize()扩容。
+        if (tab == null || (n = tab.length) &lt; MIN_TREEIFY_CAPACITY)   
+            resize();
+  // 否则，当数组长度大于64
+        else if ((e = tab[index = (n - 1) &amp; hash]) != null) {
+          // 把链表node转成TreeNode类型(Map.Node的子类)，里面封装了红黑树的属性
+            TreeNode&lt;K,V&gt; hd = null, tl = null;
+            do {
+                TreeNode&lt;K,V&gt; p = replacementTreeNode(e, null);
+                if (tl == null)
+                    hd = p;
+                else {
+                    p.prev = tl;
+                    tl.next = p;
+                }
+                tl = p;
+            } while ((e = e.next) != null);
+            if ((tab[index] = hd) != null)
+              // 把链表变成红黑树
+                hd.treeify(tab);
+        }
+    }
+
+static final class TreeNode&lt;K,V&gt; extends LinkedHashMap.Entry&lt;K,V&gt; {
+        TreeNode&lt;K,V&gt; parent;  // red-black tree links
+        TreeNode&lt;K,V&gt; left;
+        TreeNode&lt;K,V&gt; right;
+        TreeNode&lt;K,V&gt; prev;    // needed to unlink next upon deletion
+        boolean red;
+        TreeNode(int hash, K key, V val, Node&lt;K,V&gt; next) {
+            super(hash, key, val, next);
+        }
+
+        /**
+         * Returns root of tree containing this node.
+         */
+        final TreeNode&lt;K,V&gt; root() {
+            for (TreeNode&lt;K,V&gt; r = this, p;;) {
+                if ((p = r.parent) == null)
+                    return r;
+                r = p;
+            }
+        }
+</code></pre>
+<p>扩容时会重新计算index，如果index的链表长度小于6，又会把之前红黑树结构的元素变回链表</p>
+<pre><code>resize() 方法的
+else if (e instanceof TreeNode)
+                        ((TreeNode&lt;K,V&gt;)e).split(this, newTab, j, oldCap);
+</code></pre>
+<p>问题记录：</p>
+<blockquote>
+<p>#####map的hash冲突如何解决(也就是数组一个index只能存一个值，如何使index下存储多个元素)?<br>
+######通过用数组来存储链表的方式解决，看上面的map存储结构</p>
+</blockquote>
+<blockquote>
+<p>#####计算index时为什么要length-1(hash值%数组长度-1)<br>
+######因为扩容都是*2计算容量大小的，-1能使值变成奇数，%奇数能减少index的重复(减少hash冲突)</p>
+</blockquote>
+<blockquote>
+<p>#####Java8的HashMap为什么需要使用数组+链表+红黑树<br>
+#####如果index冲突过多，会导致单个链表过长，这时候查询效率会变慢，时间复杂度为o(n)，如果链表长度&gt;8的情况下，HashMap会使用红黑树来存放，，提高查询效率。查询的时间复杂度o(log n)</p>
+</blockquote>
+<blockquote>
+<p>#####jdk8对jdk7的hashMap做了哪些改进？<br>
+#####1.jdk8在jdk7的数组+链表结构上添加了红黑树<br>
+#####2.jdk7在多线程的情况下，扩容可能会出现死循环(因为采用的是头插法(将最新的节点做为frist节点))，jdk8解决了扩容造成的死循环问题，使用的是尾插法（将最新的节点存入链表的最尾部）</p>
+</blockquote>
+<blockquote>
+<p>#####负载因子的作用？<br>
+#####计算扩容的阈值，当size达到阈值时就会进行扩容</p>
+</blockquote>
+<blockquote>
+<p>#####什么时候会对容器进行扩容？每次扩容多少<br>
+#####1.当元素的size大于扩容阈值threshold时会进行扩容，扩容到原来容量的2倍<br>
+#####2.当数组中某个index下的链表长度大于8，并且数组长度小于64时，会进行扩容(扩容到原来容量的2倍)</p>
+</blockquote>
+<blockquote>
+<p>#####什么情况下会把链表转成红黑树？什么情况下又会把红黑树变回链表？<br>
+#####当链表长度大于8，并且数组长度大于64时，会将当前链表变成红黑树<br>
+#####当红黑树中元素的个数少于6时，会把红黑树转变回链表</p>
+</blockquote>
+<blockquote></blockquote>
+<blockquote>
+<p>#JDK1.7ConcurrentHashMap<br>
+######HashMap是不安全的，HashTable安全但效率低。如果在多线程并发情况，就使用ConcurrentHashMap<br>
+######JDK1.7ConcurrentHashMap是通过segment分段锁来实现安全的，ConcurrentHashMap分成16个segment，每个segment都实现了ReentrantLock，segment相当一个HashMap。里面存放HashEntry[]  (数组+链表)<br>
+#####JDK1.7ConcurrentHashMap的最大并发为16，这16个线程分别访问不同的segment<br>
+#####在segment加锁时，所有读线程是不会受到阻塞的<br>
+#####当获取size时size操作就是遍历了两次所有的Segments，每次记录Segment的modCount值，然后将两次的modCount进行比较，如果相同，则表示期间没有发生过写入操作，就将原先遍历的结果返回，如果不相同，则把这个过程再重复做一次，如果再不相同，则就需要将所有的Segment都锁住，然后一个一个遍历了<br>
+######可以理解成ConcurrentHashMap里面有16个HashMap，每个HashMap都有自己的ReentrantLock锁<br>
+<img src="C:/Users/PC/Pictures/Saved%20Pictures/JDK1.8HashMap%E4%BB%A5%E5%8F%8AConcurrentHashMap%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-3.jpg" alt="image.png" loading="lazy"></p>
+</blockquote>
+<blockquote>
+<p>#JDK1.8ConcurrentHashMap<br>
+#####JDK1.8ConcurrentHashMap，变回了HashMap的结构(数组+链表+红黑树)，去掉了segment分段锁，使用CAS无锁机制加Synchronized上锁<br>
+#####当put时，如果当前key所存放的index位置没有节点，直接把节点添加到数组，添加时会使用CAS来保证线程安全</p>
+</blockquote>
+<pre><code>for (Node&lt;K,V&gt;[] tab = table;;) {
+            Node&lt;K,V&gt; f; int n, i, fh;
+            if (tab == null || (n = tab.length) == 0)
+                tab = initTable();
+            else if ((f = tabAt(tab, i = (n - 1) &amp; hash)) == null) {
+                if (casTabAt(tab, i, null,
+                             new Node&lt;K,V&gt;(hash, key, value, null)))    //使用CAS锁添加节点
+                    break;                   // no lock when adding to empty bin
+            }
+</code></pre>
+<blockquote>
+<p>#####当put时，如果当前key所存放的index有Hash冲突的情况(已经存在节点)，则直接使用synchronized锁住当前链表</p>
+</blockquote>
+<pre><code>Node&lt;K,V&gt; f
+synchronized (f) {
+                    if (tabAt(tab, i) == f) {
+                        if (fh &gt;= 0) {
+                            binCount = 1;
+                            for (Node&lt;K,V&gt; e = f;; ++binCount) {
+                                K ek;
+                                if (e.hash == hash &amp;&amp;
+                                    ((ek = e.key) == key ||
+                                     (ek != null &amp;&amp; key.equals(ek)))) {
+                                    oldVal = e.val;
+                                    if (!onlyIfAbsent)
+                                        e.val = value;
+                                    break;
+                                }
+......
+</code></pre>
+<blockquote>
+<p>#####JDK1.8ConcurrentHashMap使用更细粒度的锁(锁数组index下的链表,1.7是锁整个数组)，put使得效率更高，而且加入了红黑树，查询效率也提高</p>
+</blockquote>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[java集合ArrayList与LinkedList源码分析]]></title>
+        <id>https://yzx2018.github.io/mypage/post/java-ji-he-arraylist-yu-linkedlist-yuan-ma-fen-xi/</id>
+        <link href="https://yzx2018.github.io/mypage/post/java-ji-he-arraylist-yu-linkedlist-yuan-ma-fen-xi/">
+        </link>
+        <updated>2019-08-16T08:19:50.000Z</updated>
+        <content type="html"><![CDATA[<p>#Array源码分析<br>
+#####首先分析new ArrayList&lt;&gt;()</p>
+<pre><code>private static final Object[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {};
+transient Object[] elementData;
+public ArrayList() {
+        // 初始化数组的容量为{}
+        this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
+    }
+</code></pre>
+<p>new ArrayList()时，会创建一个Object[] elementData = {} 的数组。由此可以知道list底层是通过Object[]数量来存储数量的</p>
+<p>#####分析通过无参构造函数初始化ArrayList时第一次调用add()方法</p>
+<pre><code>private static final Object[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {};
+transient Object[] elementData;  // 存储list数据的数组
+private int size;  //当前arrayList的size(集合容量)
+private static final int DEFAULT_CAPACITY = 10;
+
+public boolean add(E e) {
+        // 判断容器是否够大，如果超出容器大小需要进行扩容
+        ensureCapacityInternal(size + 1);  // Increments modCount!!
+        elementData[size++] = e;
+        return true;
+    }
+
+private void ensureCapacityInternal(int minCapacity) {
+        ensureExplicitCapacity(calculateCapacity(elementData, minCapacity));
+    }
+// 计算容器需要多大的容量
+private static int calculateCapacity(Object[] elementData, int minCapacity) {
+        // 如果  elementData 数组的容器为{}     
+// 如果通过new ArrayList&lt;&gt;()无参构造函数初始化时，第一次调用add()方法时会进行扩容，将容量变从{}为10
+        if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {
+            // DEFAULT_CAPACITY=10  大于 minCapacity = 1，所以会取DEFAULT_CAPACITY
+            return Math.max(DEFAULT_CAPACITY, minCapacity);
+        }
+        return minCapacity;
+        }
+
+private void ensureExplicitCapacity(int minCapacity) {
+// 这个字段用于判断是否执行快速失败原则(fail-fast)
+//相当于乐观锁的版本号，因为arraylist是线程不安全的，
+//当在进行Iterator迭代遍历时，首先获取modCount的值保存到本地变量中，当遍历时会判断本地变量和modCount(全局变量)是否相等，
+//如果不相等(有其他线程改变了集合的结构，会修改modCount的值)，就会抛出ConcurrentModificationException异常
+        modCount++;  
+
+        // overflow-conscious code
+        // 这里传进来的minCapacity是当前add元素时需要的最小容器(size+1)
+        // 当需要的最小容器大于当前容器的容量时，就需要进行扩容
+        if (minCapacity - elementData.length &gt; 0)
+            // 对容器进行扩容
+            grow(minCapacity);
+    }
+
+private void grow(int minCapacity) {
+        // overflow-conscious code
+        int oldCapacity = elementData.length;  // 当前容量大小
+// 需要扩容到多大    &gt;&gt;1表示/2     
+//相当于oldCapacity + (oldCapacity / 2)，也就是需要扩展到原来的1.5倍
+        int newCapacity = oldCapacity + (oldCapacity &gt;&gt; 1);  0+0/2=0
+// 因为上面方法调用时将minCapacity变为10传过来的
+  // 0-10&lt;0，所以会进入下面的第一个if
+        if (newCapacity - minCapacity &lt; 0)
+            newCapacity = minCapacity;    // 10
+// int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8
+        if (newCapacity - MAX_ARRAY_SIZE &gt; 0)
+            // 最大容量可设置为Integer.MAX_VALUE (2的32次方)
+            newCapacity = hugeCapacity(minCapacity);
+        // 这方法会进行扩容，会将原数据copy到一个容器大小为newCapacity新的list中，然后返回
+        elementData = Arrays.copyOf(elementData, newCapacity);
+    }
+</code></pre>
+<p>当通过无参构造函数初始化ArrayList时，在第一次add时会将list的容量扩容到10，之后每次扩容都是原来的1.5倍，比如当add到第11个元素时，会再次进行扩容，将容量扩容到15</p>
+<p>#####分析get()方法</p>
+<pre><code>public E get(int index) {
+        // 判断坐标是否越界
+        rangeCheck(index);
+        // 获取元素并返回
+        return elementData(index);
+    }
+private void rangeCheck(int index) {
+      // size为list中元素的数量
+        if (index &gt;= size)
+            throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+}
+// 获取Object数组中index坐标的值，强转成E类型并返回
+E elementData(int index) {
+        return (E) elementData[index];
+    }
+</code></pre>
+<p>get方法很简单，先判断坐标是否越界，然后获取elementData数组中元素并返回<br>
+这里要提一下size与elementData.length的区别<br>
+就相当于new arrayList(10) 与Object[] o = new Object[10]的区别<br>
+在没进对arrayList进行add添加元素的时候，不管容器大小是多少  size都为0的，所以就算new arrayList(10)，在get(0)时都会报坐标越界。<br>
+而new Object[10]在没有添加元素是，o[0]获取到的是null</p>
+<p>#####分析remove方法</p>
+<pre><code>public E remove(int index) {
+        // 判断坐标是否越界
+        rangeCheck(index);
+
+        modCount++;
+        // 获取需要删除的元素，删除成功后会方法返回
+        E oldValue = elementData(index);
+        
+        int numMoved = size - index - 1;
+        if (numMoved &gt; 0)
+            // 对数组进行元素并对坐标进行重新排序，这个方法是jvm底层的native方法
+            // 需要5个参数,
+            1. src:源数组； 
+            2.srcPos:源数组要复制的起始位置；
+            3.dest:目标数组； 
+            4.destPos:目标数组放置的起始位置； 
+            5.length:复制的长度。
+
+            System.arraycopy(elementData, index+1, elementData, index,
+                             numMoved);
+        // 数组元素的坐标重新排序后，需要对最后一个坐标设置为null，因为删除了一个元素，它后面的元素就会向前移动一位
+        elementData[--size] = null; // clear to let GC do its work
+        return oldValue;
+    }
+</code></pre>
+<blockquote>
+<p>#####ArrayList总结<br>
+1.list集合底层是通过Object[]数组来存储的<br>
+2.new ArrayList()时，初始化的容器是没有容量大小(相当于0)的，在第一次add时会将容器扩容到10，之后每次扩容数为原来的1.5倍。因为new ArrayList()初始化的容器是没有容量的，在第一次add时会进行扩容，而扩容会降低效率，所以<strong>阿里巴巴</strong>规范也有提到，一般在使用arrayList时，都会估算需要容量，初始化容器的大小，比如new ArrayList(10)，这样在add时会减少扩容的次数<br>
+3.在删除元素时，会将元素删除，并将这个元素后面的元素向前移动，然后置null最后一个位置<br>
+比如第一个图为原数组，删除 C后，会将D和E向前移动，然后将最后一个位置置为null<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/java%E9%9B%86%E5%90%88ArrayList%E4%B8%8ELinkedList%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-1.jpg" alt="image.png" loading="lazy"><br>
+4.arrayList是线程不安全的，在Iterator迭代遍历时，如果modCount被修改了，会执行快速失败原则(fail-fast)，抛出ConcurrentModificationException异常<br>
+5.如果想解决4问题，可以使用Vector集合或者Collections.synchronizedList(new ArrayList&lt;&gt;());或者CopyOnWriteArrayList集合类<br>
+6.查询速度快，查询时间复杂度小(O(1)，直接通过index到数组上找)，空间复杂度大</p>
+</blockquote>
+<p>#LinkedList源码分析</p>
+<pre><code>    transient int size = 0;   // size表示当前集合元素的大小，add会size++  remove会size--
+    transient Node&lt;E&gt; first;  // 当前集合的第一个节点
+    transient Node&lt;E&gt; last;  // 当前集合的最后一个节点
+    public LinkedList() {
+    }
+</code></pre>
+<p>new LinkedList只是初始化一个空的list，LinkedList是通过链表结构的node(节点)来存储的，首先看看Node<E>的结构</p>
+<pre><code>private static class Node&lt;E&gt; {
+        E item;    // 当前节点的元素
+        Node&lt;E&gt; next;  // 当前节点的下一个节点
+        Node&lt;E&gt; prev;  // 当前节点的上一个节点
+
+        Node(Node&lt;E&gt; prev, E element, Node&lt;E&gt; next) {
+            this.item = element;
+            this.next = next;
+            this.prev = prev;
+        }
+    }
+</code></pre>
+<p>在LinkedList中增加A   B   C三个元素，它的存储结构如下图，每个元素对会封装成Node节点对象来存储<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/java%E9%9B%86%E5%90%88ArrayList%E4%B8%8ELinkedList%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-2.jpg" alt="image.png" loading="lazy"></p>
+<p>#####LinkedList的add方法</p>
+<pre><code>transient Node&lt;E&gt; first;  // 当前集合的第一个节点
+transient Node&lt;E&gt; last;  // 当前集合的最后一个节点
+public boolean add(E e) {
+        // 在链表的最后增加元素
+        linkLast(e);
+        return true;
+    }
+
+void linkLast(E e) {
+        final Node&lt;E&gt; l = last;   // 获取当前集合的最后一个节点
+        final Node&lt;E&gt; newNode = new Node&lt;&gt;(l, e, null);  // 封装当前需要添加的节点
+        last = newNode; // 将需要添加的节点设置为当前链表的最后一个节点
+        if (l == null)  // 如果last为null(表示当前元素没有node对象)
+            first = newNode;  第一个node设置为当前增加的节点对象
+        else
+            l.next = newNode;  // 否则在最后一个节点的下一个位置加上当前需要增加的节点对象
+        size++;
+        modCount++;
+    }
+</code></pre>
+<p>调用add时会在链表的最后增加一个节点来存储这个元素,这里提一点linkedList.add(null);在增加是会添加一个Node对象来存储，这个null值是赋值在node.item=null，不要理解成node=null<br>
+#####LinkedList的get方法</p>
+<pre><code>public E get(int index) {
+        // 检查坐标是否越界
+        checkElementIndex(index);
+        // 获取这个坐标的元素并返回
+        return node(index).item;
+    }
+
+Node&lt;E&gt; node(int index) {
+         // 通过折半查找(二分查找)法来查询node节点所在的位置
+        // 如果index小于size的一半，就从第一个元素开始找，不断向下一个元素找
+        if (index &lt; (size &gt;&gt; 1)) {
+            Node&lt;E&gt; x = first;
+            for (int i = 0; i &lt; index; i++)
+                x = x.next;
+            return x;
+        } else {  否则从最后一个元素开始往前找
+            Node&lt;E&gt; x = last;
+            for (int i = size - 1; i &gt; index; i--)
+                x = x.prev;
+            return x;
+        }
+    }
+</code></pre>
+<p>LinkedList不像数组那样每个元素都有一个索引标识，只能从第一个node对象或者最后一个node对象遍历index次(first.next或last.next执行index次)找到这个元素，比如链表长度为100  需要查询index 60的元素  如果从first节点开始找，就需要循环遍历60次。linkedList底层通过折半查找(二分查找)法，60大于50(一半)，从100开始循环遍历40次就能定位到，提高查询效率</p>
+<p>#####LinkedList的remove方法</p>
+<pre><code>public E remove(int index) {
+         // 检查坐标是否越界
+        checkElementIndex(index);
+        // 先查询出node节点，然后删除这个节点
+        return unlink(node(index));
+    }
+
+E unlink(Node&lt;E&gt; x) {
+        // assert x != null;
+        final E element = x.item;
+        final Node&lt;E&gt; next = x.next;
+        final Node&lt;E&gt; prev = x.prev;
+
+        if (prev == null) {
+            first = next;
+        } else {
+            prev.next = next;
+            x.prev = null;
+        }
+
+        if (next == null) {
+            last = prev;
+        } else {
+            next.prev = prev;
+            x.next = null;
+        }
+
+        x.item = null;
+        size--;
+        modCount++;
+        return element;
+    }
+</code></pre>
+<p>LinkedList删除元素，其实就是将这个元素的node节点对象的prev(上一下)node节点对象和next(下一个)节点对象的所关联的prev和node的指向修改，然后将当前node节点的属性都置空(便于GC回收)</p>
+<blockquote>
+<p>#####LinkedList总结<br>
+1.LinkedList底层是通过双向链表结构node节点对象来存储的，node对象有三个属性item(当前元素值)，prev(上一个node对象)，next(下一个node对象)。<br>
+2.linkedList.add(null)，存储的是node.item=null，而不是node=null。<br>
+3.增加和删除的速度快，空间复杂度小(不需要记录节点的位置)，查询时间复杂度大(查询相对慢 O(n)，比如有100个元素，找第30个。就需要把链表的node从第一个开始node.next循环30次才能找出来)</p>
+</blockquote>
+<p>#####set集合</p>
+<pre><code>public HashSet() {
+        map = new HashMap&lt;&gt;();
+    }
+public TreeSet() {
+        this(new TreeMap&lt;E,Object&gt;());
+    }
+
+private static final Object PRESENT = new Object();
+public boolean add(E e) {
+        return map.put(e, PRESENT)==null;
+    }
+</code></pre>
+<p>set集合底层用的是map，HashSet用的是HashMap，TreeSet用的是TreeMap<br>
+set.add时会把元素值存到map的key中，value为new Object()对象<br>
+因为map中的key是唯一的，所以set集合可以保存元素的唯一性</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[SpringBootApplication注解分析]]></title>
+        <id>https://yzx2018.github.io/mypage/post/springbootapplication-zhu-jie-fen-xi/</id>
+        <link href="https://yzx2018.github.io/mypage/post/springbootapplication-zhu-jie-fen-xi/">
+        </link>
+        <updated>2019-07-20T08:16:52.000Z</updated>
+        <content type="html"><![CDATA[<p>@SpringBootApplication</p>
+<figure data-type="image" tabindex="1"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/SpringBootApplication%E6%B3%A8%E8%A7%A3%E5%88%86%E6%9E%90-1.jpg" alt="image" loading="lazy"></figure>
+<p>我们可以看到@SpringBootApplication主要由以下三个注解组合。</p>
+<p>####@SpringBootConfiguration</p>
+<p>#####@EnableAutoConfiguration</p>
+<h2 id="componentscan">#####@ComponentScan</h2>
+<p>#@SpringBootConfiguration注解(指定springboot的主配置类(启动类))</p>
+<blockquote>
+<p><strong>@SpringBootConfiguration</strong>标注在某个类上，表示这是一个springboot的配置类<br>
+一层层点到最后，发现其实就是我们熟悉的spring的framework包下的注解@Configuartion<br>
+@Configuartion:配置类上用这个注册-配置类的作用可以充当配置文件，配置类也是容器中的一个组件;@Component</p>
+</blockquote>
+<pre><code>@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Configuration
+public @interface SpringBootConfiguration {
+}
+</code></pre>
+<p>@Configuartion是@Component的派生注解<br>
+@Service、@Repository、@Configuartion等注解都是@Component的派生，可以理解成@Component是父类，@Configuartion是子类。<br>
+其实这些注解的作用都是，就是spring扫描类时会对加上这些注解的类自动装配到Spring容器中进行管理。只是注解分多个名称来标注，阅读代码时更好的理解代码的作用，我们可以看看<br>
+ClassPathScanningCandidateComponentProvider类<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/SpringBootApplication%E6%B3%A8%E8%A7%A3%E5%88%86%E6%9E%90-2.jpg" alt="image" loading="lazy"><br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/SpringBootApplication%E6%B3%A8%E8%A7%A3%E5%88%86%E6%9E%90-3.jpg" alt="image" loading="lazy"><br>
+扫描的就是@Component注解，和它派生出来的注解(子类注解)</p>
+<h2 id="与xml中配置bean-id-class作用相同">与xml中配置<bean id="" class=""/>作用相同</h2>
+<p>#@EnableAutoConfiguration 开启自动配置功能springboot启动类所在包及子包的组件类和自动配置类(META-INF/spring.factories文件下的类)，并将其初始化注入到IOC容器)</p>
+<pre><code>@AutoConfigurationPackage
+@Import(EnableAutoConfigurationImportSelector.class)
+public @interface EnableAutoConfiguration {
+</code></pre>
+<blockquote>
+<p>一.@<strong>AutoConfigurationPackage</strong>：自动配置包，这注解里面通过@Import(AutoConfigurationPackages.Registrar.class)注入了Registrar类，springboot启动时这个类的<strong>registerBeanDefinitions</strong>方法会扫描获取到springboot启动类所在的包及其子包下所有的类,将扫描到的所有组件(加了@Component等spring注解的类)注入spring的IOC容器中</p>
+</blockquote>
+<pre><code>static class Registrar implements ImportBeanDefinitionRegistrar, DeterminableImports {
+
+		@Override
+		public void registerBeanDefinitions(AnnotationMetadata metadata,
+				BeanDefinitionRegistry registry) {
+			register(registry, new PackageImport(metadata).getPackageName());
+		}
+</code></pre>
+<blockquote>
+<p>二.@<strong>Import</strong>(EnableAutoConfigurationImportSelector.class)；<br>
+注入的EnableAutoConfigurationImportSelector类，这个Selector选择器类会给容器中导入非常多的自动配置类（xxxAutoConfiguration）<br>
+这个类会调用SpringFactoriesLoader.loadFactoryNames(EnableAutoConfiguration.class,classLoader)方法<br>
+Spring Boot在启动的时候从类路径下的META-INF/spring.factories中获取EnableAutoConfiguration指定的值，将这些值作为自动配置类导入到容器中，自动配置类就生效，帮我们进行自动配置工作(类似于java的spi)</p>
+</blockquote>
+<p><strong>自动配置：比如之前启动WebMvc需要在xml上写很多配置，现在只要引入springboot的starter-web包,springboot启动时会将spring-boot-autoconfigure-2.1.4.RELEASE.jar包下的META-INF\spring.factories配置文件org.springframework.boot.autoconfigure.EnableAutoConfiguration为key的类加载到IOC容器中，其中就有启动WebMvc需要配置的自动配置类WebMvcAutoConfiguration，这个类初始化就会帮我们配置好webMVC需要的配置</strong><br>
+<strong>又比如启动springboot web时不配置server.port，默认的端口号为8080，这也是通过自动配置类初始化的</strong></p>
+<p>#@ComponentScan注解</p>
+<blockquote>
+<p>指定要扫描的包及其子包下的类，默认扫描当前类的同级包及其子包，作用：比如某个类上有@Component，还需要@ComponentScan注解来指定扫描这个包的类，spring才会去处理这个类上的注解<br>
+xml的&lt;context:component-scan base-package=&quot;&quot; /&gt;作用相同</p>
+</blockquote>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[spring解决单实例bean的循环依赖]]></title>
+        <id>https://yzx2018.github.io/mypage/post/spring-jie-jue-dan-shi-li-bean-de-xun-huan-yi-lai/</id>
+        <link href="https://yzx2018.github.io/mypage/post/spring-jie-jue-dan-shi-li-bean-de-xun-huan-yi-lai/">
+        </link>
+        <updated>2019-07-16T07:49:05.000Z</updated>
+        <content type="html"><![CDATA[<p>singletonObjects一级缓存，存放完整的对象</p>
+<p>earlySingletonObjects 二级缓存，存放不完成的对象(只实例化对象，并未赋值)<br>
+singletonFactories 三级缓存，存放不完成的对象(只实例化对象，并未赋值)</p>
+<p>二级缓存存放的就是三级缓存的对象。如果在singletonFactories找到对应的对象，会把它存放到earlySingletonObjects中，并删除singletonFactories中的对象。<br>
+为什么不直接放入二级缓存?<br>
+(是为了做扩展)</p>
+<p>A依赖B   B依赖A<br>
+创建A对象时<br>
+1.首先从容器缓存查询(先查询一级缓存，如果一级缓存不存在，并且A对象被标记为正在创建，就会查二、三级缓存)是否有A对象<br>
+2.缓存中查询不到A对象，开始实例化A对象(此时并未给属性赋值)，然后将A实例(不完整对象)存放到singletonFactories(三级缓存中)<br>
+org.springframework.beans.factory.support.DefaultSingletonBeanRegistry#addSingletonFactory<br>
+3.然后对A对象属性进行赋值<br>
+org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#populateBean<br>
+4.A对象属性中依赖了B对象，当给A对象赋值B时，会从容器中找B对象，此时又会走1 2 3步骤<br>
+5.首先从容器缓存查询(先查询一级缓存，如果一级缓存不存在，并且B对象被标记为正在创建，就会查二、三级缓存)是否有B对象<br>
+6.容器缓存中查询不到A对象，开始实例化B对象(此时并未给属性赋值)，然后将B实例(不完整对象)存放到singletonFactories(三级缓存中)<br>
+7.然后对B对象属性进行赋值<br>
+org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#populateBean<br>
+8.B对象属性中依赖了A对象,当给B对象赋值A时，会从容器中找A对象，此时的A对象已经被标记为正在创建并存放到三级缓存中，所以可以找到A对象的实例，然后B对象赋值时会引用这个A实例(此时的A实例是不完整的对象)<br>
+9.给B赋值完后，此时B对象是一个完成的对象，B对象初始化完成(创建实例并赋值完成)后会存到一级缓存中，并删除二、三级缓存保存的B对象<br>
+10.此时又回到A对象的赋值，找到B对象引用，A对象成功给B属性赋值<br>
+11.A对象赋值完成后,A对象初始化完成(创建实例并赋值完成)后会存到一级缓存中，并删除二、三级缓存保存的A对象<br>
+12.因为B对象的A属性是引用了A对象的地址，此时A对象也赋值完成了，所以B对象引用的A对象也变成了完整的对象(单例对象，引用地址是同一份)<br>
+上面都是指A和B单例对象</p>
+<p>如果把A和B都设置成spoce(&quot;prototype&quot;)多例，就无法解决循环依赖问题，因为spring创建对象时只缓存单例对象<br>
+只能不使用spring的依赖注入，通过set方法手动赋值</p>
+<p>如果把A对象构造方法引用B，B对象构造方法引用A，也是无法解决循环依赖问题，因为两个对象都无法实例化，更不用说赋值了</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[spring源码之Bean的创建过程与Spring AOP原理]]></title>
+        <id>https://yzx2018.github.io/mypage/post/spring-yuan-ma-zhi-bean-de-chuang-jian-guo-cheng-yu-spring-aop-yuan-li/</id>
+        <link href="https://yzx2018.github.io/mypage/post/spring-yuan-ma-zhi-bean-de-chuang-jian-guo-cheng-yu-spring-aop-yuan-li/">
+        </link>
+        <updated>2019-07-13T07:46:36.000Z</updated>
+        <content type="html"><![CDATA[<p>#Bean的创建过程<br>
+#####spring注解版单实例Bean的创建是容器启动的时候调用getBean(beanName)创建，然后保存到IOC容器中；多实例Bean每次都会getBean(beanName)创建新的实例<br>
+调用的方法是<br>
+<strong>org.springframework.context.support.AbstractApplicationContext#refresh</strong><br>
+ <strong>org.springframework.context.support.AbstractApplicationContext#finishBeanFactoryInitialization</strong><br>
+  <strong>org.springframework.beans.factory.config.ConfigurableListableBeanFactory#preInstantiateSingletons</strong><br>
+   <strong>org.springframework.beans.factory.support.AbstractBeanFactory#getBean(java.lang.String)</strong><br>
+    <strong>org.springframework.beans.factory.support.AbstractBeanFactory#doGetBean</strong></p>
+<p>#####getBean(java.lang.String)方法调用了doGetBean(name, null, null, false)处理Bean的创建<br>
+我们来看看doGetBean()做了哪些处理，<strong>这里主要分析单实例Bean的创建过程</strong>。</p>
+<pre><code>protected &lt;T&gt; T doGetBean(final String name, @Nullable final Class&lt;T&gt; requiredType,
+			@Nullable final Object[] args, boolean typeCheckOnly) throws BeansException {
+
+		final String beanName = transformedBeanName(name);
+		Object bean;
+
+		// 1.先获取缓存中保存的单实例Bean。如果能获取到说明这个Bean之前被创建过（所有创建过的单实例Bean都会被缓存起来），如果bean的定义信息scope是多例，就不会被缓存
+		Object sharedInstance = getSingleton(beanName);
+		if (sharedInstance != null &amp;&amp; args == null) {
+			......
+             // 如果缓存中有,判断这个Bean是否是FactoryBean，如果不是FactoryBean，直接返回sharedInstance
+			bean = getObjectForBeanInstance(sharedInstance, name, beanName, null);
+		}
+              // 2.如果缓存中不存在对应Bean的实例
+		else {
+			// 判断这个bean是否正在创建中
+			if (isPrototypeCurrentlyInCreation(beanName)) {
+				throw new BeanCurrentlyInCreationException(beanName);
+			}
+
+		......忽略部份代码
+                        
+			if (!typeCheckOnly) {
+                // 3.标记当前bean已经被创建（或即将创建）
+				markBeanAsCreated(beanName);
+			}
+
+			try {
+                              //4.获取Bean的定义信息
+				final RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
+				checkMergedBeanDefinition(mbd, beanName, args);
+
+				// 5.获取当前Bean所依赖的其他Bean
+				String[] dependsOn = mbd.getDependsOn();
+				if (dependsOn != null) {
+					for (String dep : dependsOn) {
+						if (isDependent(beanName, dep)) {
+							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
+									&quot;Circular depends-on relationship between '&quot; + beanName + &quot;' and '&quot; + dep + &quot;'&quot;);
+						}
+						registerDependentBean(dep, beanName);
+						try {
+                         // 6.如果当前Bean依赖了其他Bean，通过getBean()先把所依赖的Bean先创建出来
+							getBean(dep);
+						}
+						catch (NoSuchBeanDefinitionException ex) {
+							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
+									&quot;'&quot; + beanName + &quot;' depends on missing bean '&quot; + dep + &quot;'&quot;, ex);
+						}
+					}
+				}
+
+				// 7.如果是单实例Bean
+				if (mbd.isSingleton()) {
+                     // 创建Bean实例对象并添加到IOC容器中
+					sharedInstance = getSingleton(beanName, () -&gt; {
+						try {
+                                  //8.单实例Bean的创建
+							return createBean(beanName, mbd, args);
+						}
+						catch (BeansException ex) {
+							destroySingleton(beanName);
+							throw ex;
+						}
+					});
+                                      // 判断当前Bean是不是FactoryBean，不是就直接返回sharedInstance(原来的Bean实例)
+					bean = getObjectForBeanInstance(sharedInstance, name, beanName, mbd);
+				}
+                           
+......忽略部份代码
+	}
+</code></pre>
+<p>上**面代码 8.单实例Bean的创建，getSingleton方法内调用了createBean(beanName, mbd, args)是创建Bean的流程   分析createBean(beanName, mbd, args) **</p>
+<pre><code>protected Object createBean(String beanName, RootBeanDefinition mbd, @Nullable Object[] args)
+			throws BeanCreationException {
+
+		if (logger.isTraceEnabled()) {
+			logger.trace(&quot;Creating instance of bean '&quot; + beanName + &quot;'&quot;);
+		}
+		RootBeanDefinition mbdToUse = mbd;
+
+		
+		......忽略部份代码
+
+		try {
+           //让BeanPostProcessors(后置处理器)有机会返回代理而不是目标bean实例
+	    // 判断容器中是否有InstantiationAwareBeanPostProcessor的实现(比如开启AOP时就会调用)，如果有则执行InstantiationAwareBeanPostProcessor
+          // InstantiationAwareBeanPostProcessors会先触发：postProcessBeforeInstantiation()；
+          //如果有返回值(一般不会有返回值)：再触发postProcessAfterInitialization()
+			Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
+			if (bean != null) {
+				return bean;
+			}
+		}
+		catch (Throwable ex) {
+			throw new BeanCreationException(mbdToUse.getResourceDescription(), beanName,
+					&quot;BeanPostProcessor before instantiation of bean failed&quot;, ex);
+		}
+
+		try {
+             // 如果前面的InstantiationAwareBeanPostProcessor没有返回代理对象，调用doCreateBean创建
+			Object beanInstance = doCreateBean(beanName, mbdToUse, args);
+			if (logger.isTraceEnabled()) {
+				logger.trace(&quot;Finished creating instance of bean '&quot; + beanName + &quot;'&quot;);
+			}
+			return beanInstance;
+		}
+		......
+	}
+</code></pre>
+<p>最终调用doCreateBean(beanName, mbdToUse, args)方法创建完成Bean的创建</p>
+<pre><code>protected Object doCreateBean(final String beanName, final RootBeanDefinition mbd, final @Nullable Object[] args)
+			throws BeanCreationException {
+
+		// Instantiate the bean.
+              //BeanWrapper  存储对象的实例
+		BeanWrapper instanceWrapper = null;
+		if (mbd.isSingleton()) {
+			instanceWrapper = this.factoryBeanInstanceCache.remove(beanName);
+		}
+		if (instanceWrapper == null) {
+                        // 1.创建Bean实例(利用工厂方法或者对象的构造器创建出Bean实例)
+			instanceWrapper = createBeanInstance(beanName, mbd, args);
+		}
+		......
+
+		// Allow post-processors to modify the merged bean definition.
+		synchronized (mbd.postProcessingLock) {
+			if (!mbd.postProcessed) {
+				try {
+             //  2.调用MergedBeanDefinitionPostProcessor(后置处理器)的postProcessMergedBeanDefinition方法
+					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
+				}
+				catch (Throwable ex) {
+					throw new BeanCreationException(mbd.getResourceDescription(), beanName,
+							&quot;Post-processing of merged bean definition failed&quot;, ex);
+				}
+				mbd.postProcessed = true;
+			}
+		}
+
+		......
+
+		// Initialize the bean instance.   初始化bean实例
+		Object exposedObject = bean;
+		try {
+  // 3.给bean的属性赋值
+      // 1)赋值之前会从容器中获取InstantiationAwareBeanPostProcessor(后置处理器)执行  postProcessProperties()
+     // 2)再执行postProcessPropertyValues() (应用Bean属性的值,即可以对属性值进行修改(这个时候属性值还未被设置(还未调用set赋值)，但是我们可以修改原本该设置进去的属性值))
+     // 3)最后属性利用setter方法等进行赋值 applyPropertyValues(beanName, mbd, bw, pvs)
+			populateBean(beanName, mbd, instanceWrapper);
+            // 4.Bean初始化
+                //1) invokeAwareMethods(beanName, bean);执行xxxAware接口的方法
+                // 2)applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName) 执行后置处理器初始化的前置方法(bean初始化之前调用)  BeanPostProcessor.postProcessBeforeInitialization（）
+                // 3)执行初始化方法 
+                          //1)如果该Bean实现了InitializingBean接口；执行接口规定的初始化    
+                         // 2)如果指定了自定义初始化方法( @Bean(initMethod = &quot;init&quot;))，执行自定义初始化方法
+                //4.applyBeanPostProcessorsAfterInitialization执行后置处理器初始化的后置方法(bean初始化之后调用)BeanPostProcessor.postProcessAfterInitialization()		
+exposedObject = initializeBean(beanName, exposedObject, mbd)
+		}
+		catch (Throwable ex) {
+			if (ex instanceof BeanCreationException &amp;&amp; beanName.equals(((BeanCreationException) ex).getBeanName())) {
+				throw (BeanCreationException) ex;
+			}
+			else {
+				throw new BeanCreationException(
+						mbd.getResourceDescription(), beanName, &quot;Initialization of bean failed&quot;, ex);
+			}
+		}
+
+		......
+		// Register bean as disposable.
+		try {
+                       // 注册Bean的销毁方法
+			registerDisposableBeanIfNecessary(beanName, bean, mbd);
+		}
+		catch (BeanDefinitionValidationException ex) {
+			throw new BeanCreationException(
+					mbd.getResourceDescription(), beanName, &quot;Invalid destruction signature&quot;, ex);
+		}
+
+		return exposedObject;
+	}
+</code></pre>
+<p>createBean创建完成之后返回Bean实例对象然后继续走getSingleton方法将Bean实例缓存到容器的singletonObjects的Map中（调用addSingleton()）</p>
+<pre><code>if (mbd.isSingleton()) {
+                     // createBean创建Bean实例对象，getSingleton将其缓存到singletonObjects的Map中
+					sharedInstance = getSingleton(beanName, () -&gt; {
+						try {
+                                  //8.单实例Bean的创建
+							return createBean(beanName, mbd, args);
+						}
+						catch (BeansException ex) {
+							destroySingleton(beanName);
+							throw ex;
+						}
+					});
+                    // 判断当前Bean是不是FactoryBean，不是就直接返回sharedInstance(原来的Bean实例)
+					bean = getObjectForBeanInstance(sharedInstance, name, beanName, mbd);
+				}
+</code></pre>
+<p>总结单实例Bean的创建过程</p>
+<blockquote>
+<p>#####getBean(beanName) 创建对象<br>
+##### 1.doGetBean(name, null, null, false)<br>
+  1)先获取缓存中保存的单实例Bean。如果能获取到说明这个Bean之前被创建过，直接返回回（所有创建过的单实例Bean都会被缓存起来，如果bean的定义信息scope是多例，就不会被缓存）<br>
+  2)缓存中获取不到，开始Bean的创建对象流程<br>
+  3)标记当前bean已经被创建（或即将创建）<br>
+  4)获取Bean的定义信息(依赖、属性、作用域等Bean的信息都存在BeanDefinition)<br>
+  5)从定义信息中getDependsOn获取当前Bean所依赖的其他Bean,如果有调用getBean()把依赖的Bean先创建出来(<strong>注意，这个依赖是指@DependsOn指定的其他bean，当前bean的属性依赖</strong>)<br>
+  6)createBean(beanName, mbd, args)  创建当前Bean的实例对象<br>
+    1、调用Object bean = resolveBeforeInstantiation(beanName, mbdToUse); 让BeanPostProcessors(后置处理器)有机会返回代理而不是目标bean实例，判断容器中是否有InstantiationAwareBeanPostProcessor的实现(比如开启AOP时就会调用)，如果有InstantiationAwareBeanPostProcessors会先触发：postProcessBeforeInstantiation()；如果有返回值(一般不会有返回值)：再触发postProcessAfterInitialization()<br>
+    2、如果前面的InstantiationAwareBeanPostProcessor没有返回代理对象，调用doCreateBean创建<br>
+    3、Object beanInstance = doCreateBean(beanName, mbdToUse, args) 创建Bean实例对象<br>
+      1.instanceWrapper = createBeanInstance(beanName, mbd, args); 创建Bean实例(利用工厂方法或者对象的构造器创建出Bean实例)<br>
+      2.applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);从容器中获取MergedBeanDefinitionPostProcessor(后置处理器)并调用postProcessMergedBeanDefinition方法<br>
+      3.populateBean(beanName, mbd, instanceWrapper); 给Bean属性赋值<br>
+        1/赋值之前会从容器中获取InstantiationAwareBeanPostProcessor(后置处理器)<br>
+        2/执行InstantiationAwareBeanPostProcessor的postProcessProperties()进行处理<br>
+        3/再执行postProcessPropertyValues() (应用Bean属性的值,即可以对属性值进行修改(这个时候属性值还未被设置(还未调用set赋值)，但是我们可以修改原本该设置进去的属性值))<br>
+        4/最后属性利用setter方法进行赋值 applyPropertyValues(beanName, mbd, bw, pvs)<br>
+      4.initializeBean(beanName, exposedObject, mbd); 对Bean进行初始化处理<br>
+        1/invokeAwareMethods(beanName, bean);判断当前Bean是否实现了xxxAware的接口，如果是就执行xxxAware接口的方法(比如ApplicationContextAware:setApplicationContext())<br>
+        2/applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName) 后置处理器的前置处理BeanPostProcessor.postProcessBeforeInitialization() (bean初始化之前调用)<br>
+        3/执行初始化方法，首先判断：如果该Bean实现了InitializingBean接口,执行接口规定的初始化 。然后判断：如果指定了自定义初始化方法( @Bean(initMethod = &quot;init&quot;))，执行自定义初始化init方法<br>
+        4/applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName)执行后置处理器后置方法BeanPostProcessor.postProcessAfterInitialization()(bean初始化之后调用)<br>
+      5.registerDisposableBeanIfNecessary(beanName, bean, mbd); 注册Bean的销毁方法<br>
+  7)Bean创建完成后，执行getSingleton方法将创建的Bean添加到IOC容器中(缓存到singletonObjects(Map集合)中，IOC容器有很多个map集合，这是其中一个)</p>
+</blockquote>
+<hr>
+<p>#####Bean生命周期流程图<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-1.jpg" alt="Bean生命周期流程图" loading="lazy"></p>
+<hr>
+<p>#spring aop的原理分析<br>
+AOP：面向切面的编程，在方法运行时，动态将方法切入到其他代码中运行<br>
+切面（@Aspect）、切入点（@Pointcut）通知(@Before、@After、@AfterReturning、@AfterThrowing、@Around)</p>
+<p>spring注解方式开启aop功能只需要在配置类上加上@EnableAspectJAutoProxy注解</p>
+<pre><code>@Configuration
+@EnableAspectJAutoProxy
+public class DemoApplication {
+	public static void main(String[] args) {
+    AnnotationConfigApplicationContext applicationContextionContext = new AnnotationConfigApplicationContext(DemoApplication.class);
+}
+</code></pre>
+<p>AOP原理主要通过@EnableAspectJAutoProxy注解来实现<br>
+#####分析@EnableAspectJAutoProxy<br>
+点进@EnableAspectJAutoProxy中，发现@Import(AspectJAutoProxyRegistrar.class)，这个注解作用是把AspectJAutoProxyRegistrar注册到容器中</p>
+<pre><code>@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Import(AspectJAutoProxyRegistrar.class)  // 把AspectJAutoProxyRegistrar导入到容器中
+public @interface EnableAspectJAutoProxy {
+...... 忽略部份代码
+}
+</code></pre>
+<p>#####1、进入AspectJAutoProxyRegistrar类<br>
+   1.这个类实现了ImportBeanDefinitionRegistrar，可通过BeanDefinitionRegistry  registry手动注册组件到容器中<br>
+   2.AopConfigUtils.registerAspectJAnnotationAutoProxyCreatorIfNecessary(registry) 手动给容器注册一个AspectJAnnotationAutoProxyCreator组件</p>
+<pre><code>class AspectJAutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
+
+	/**
+	 * Register, escalate, and configure the AspectJ auto proxy creator based on the value
+	 * of the @{@link EnableAspectJAutoProxy#proxyTargetClass()} attribute on the importing
+	 * {@code @Configuration} class.
+	 */
+	@Override
+	public void registerBeanDefinitions(
+			AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+                // 给容器注册一个AspectJAnnotationAutoProxyCreator类
+		AopConfigUtils.registerAspectJAnnotationAutoProxyCreatorIfNecessary(registry);
+         ...... 忽略部份代码
+}
+
+</code></pre>
+<p>#####2、进入上面的registerAspectJAnnotationAutoProxyCreatorIfNecessary()方法，这个方法最终包装到registerOrEscalateApcAsRequired()方法来处理<br>
+   1.注册一个beanName(bean的id)为internalAutoProxyCreator的AnnotationAwareAspectJAutoProxyCreator类到容器中</p>
+<pre><code>@Nullable
+	private static BeanDefinition registerOrEscalateApcAsRequired(
+			Class&lt;?&gt; cls, BeanDefinitionRegistry registry, @Nullable Object source) {
+          ......忽略部份代码
+		RootBeanDefinition beanDefinition = new RootBeanDefinition(cls);
+		beanDefinition.setSource(source);
+		beanDefinition.getPropertyValues().add(&quot;order&quot;, Ordered.HIGHEST_PRECEDENCE);
+		beanDefinition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+    // 传入的cls为AnnotationAwareAspectJAutoProxyCreator.class
+ // public static final String AUTO_PROXY_CREATOR_BEAN_NAME =&quot;org.springframework.aop.config.internalAutoProxyCreator&quot;;
+        // 注册一个beanName(bean的id)为internalAutoProxyCreator的AnnotationAwareAspectJAutoProxyCreator类到容器中
+		registry.registerBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME, beanDefinition);
+		return beanDefinition;
+	}
+</code></pre>
+<p>#####3、最终将AnnotationAwareAspectJAutoProxyCreator类的定义信息注册到容器中(beanDefinitionMap(Map集合)中)，这个类是后置处理器的实现类(后置处理器会在bean初始化前后做一些处理)。<br>
+#####4、之前讲spring启动原理的时候提到过后置处理器的实现会在刷新容器的时候会调用registerBeanPostProcessors(beanFactory)，找出这些后置处理器定义信息调用getBean方法(上面已经讲过bean的创建流程)进行Bean创建并初始化注册到容器中然后(保存到容器的beanPostProcessors(Map集合)中)</p>
+<pre><code>public static void registerBeanPostProcessors(
+			ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
+
+		......忽略部份代码
+          //    AnnotationAwareAspectJAutoProxyCreator的父类实现了Ordered接口，所以处理的逻辑在这里注册
+		// Next, register the BeanPostProcessors that implement Ordered.
+                // 注册实现了Ordered接口的BeanPostProcessor
+		List&lt;BeanPostProcessor&gt; orderedPostProcessors = new ArrayList&lt;&gt;();
+		for (String ppName : orderedPostProcessorNames) {
+                        // 通过getBean创建并初始化Bean对象
+			BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
+			orderedPostProcessors.add(pp);
+			if (pp instanceof MergedBeanDefinitionPostProcessor) {
+				internalPostProcessors.add(pp);
+			}
+		}
+		sortPostProcessors(orderedPostProcessors, beanFactory);
+             //   然后保存到容器的beanPostProcessors的位置中
+		registerBeanPostProcessors(beanFactory, orderedPostProcessors);
+	......忽略部份代码
+	}
+</code></pre>
+<p><strong>到这里AnnotationAwareAspectJAutoProxyCreator就创建完成了，它属于InstantiationAwareBeanPostProcessor类型的BeanPostProcessor</strong></p>
+<p>#####spring aop注解使用AOP功能只需要编写一个切面类@Aspect，然后指定@Pointcut需要代理的包范围，再编写 @Before等通知方法，例如下面代码</p>
+<pre><code> */
+@Component
+@Aspect
+public class MyAspectJ {
+    //抽取公共的切入点表达式
+    //1、本类引用
+    //2、其他的切面引用
+    @Pointcut(&quot;execution(public * com.example.demo.aop..*.*(..))&quot;)
+    public void pointCut(){};
+
+    //@Before在目标方法之前切入；切入点表达式（指定在哪个方法切入）
+    @Before(&quot;pointCut()&quot;)
+    public void before(JoinPoint joinPoint){
+        Object[] args = joinPoint.getArgs();
+        System.out.println(&quot;&quot;+joinPoint.getSignature().getName()+&quot;运行。。。@Before:参数列表是：{&quot;+ Arrays.asList(args)+&quot;}&quot;);
+    }
+
+    @After(&quot;pointCut()&quot;)
+    public void after(JoinPoint joinPoint){
+        System.out.println(&quot;&quot;+joinPoint.getSignature().getName()+&quot;结束。。。@After&quot;);
+    }
+
+    //JoinPoint一定要出现在参数表的第一位
+    @AfterReturning(value=&quot;pointCut()&quot;,returning=&quot;result&quot;)
+    public void afterReturning(JoinPoint joinPoint,Object result){
+        System.out.println(&quot;&quot;+joinPoint.getSignature().getName()+&quot;正常返回。。。@AfterReturning:运行结果：{&quot;+result+&quot;}&quot;);
+    }
+
+    @AfterThrowing(value=&quot;pointCut()&quot;,throwing=&quot;exception&quot;)
+    public void afterThrowing(JoinPoint joinPoint,Exception exception){
+        System.out.println(&quot;&quot;+joinPoint.getSignature().getName()+&quot;异常。。。异常信息：{&quot;+exception+&quot;}&quot;);
+    }
+}
+</code></pre>
+<p>// 需要增强的目标方法类(这个类必须在com.example.demo.aop下)</p>
+<pre><code>// vp需要增强的目标方法
+package com.example.demo.aop;
+@Component
+public class MyAopBean {
+    public int vp(){
+        System.out.println(&quot;运行vp方法&quot;);
+        return 1;
+    }
+}
+</code></pre>
+<p>####这里主要分析切面类(MyAspectJ)和需要增强的目标方法类(MyAopBean)的创建实例对象的过程</p>
+<p>#MyAspectJ创建实例对象过程<br>
+MyAspectJ的实例化过程与上面分析的单实例Bean实例过程一致，不同的是开启AOP切面类(MyAspectJ)在<br>
+6.1、调用Object bean = resolveBeforeInstantiation(beanName, mbdToUse)会执行<br>
+AbstractAutoProxyCreator.postProcessBeforeInstantiation()，把MyAspectJ切面类增加到advisedBeans(this.advisedBeans.put(cacheKey, Boolean.FALSE))</p>
+<pre><code>@Nullable
+	protected Object resolveBeforeInstantiation(String beanName, RootBeanDefinition mbd) {
+		Object bean = null;
+	......
+// 因为AOP的AnnotationAwareAspectJAutoProxyCreator属于InstantiationAwareBeanPostProcessor类型的后置处理器
+//所以会进行applyBeanPostProcessorsBeforeInstantiation(targetType, beanName)方法
+			if (!mbd.isSynthetic() &amp;&amp; hasInstantiationAwareBeanPostProcessors()) {
+				Class&lt;?&gt; targetType = determineTargetType(beanName, mbd);
+				if (targetType != null) {
+					bean = applyBeanPostProcessorsBeforeInstantiation(targetType, beanName);
+					if (bean != null) {
+						bean = applyBeanPostProcessorsAfterInitialization(bean, beanName);
+					}
+	......
+	}
+</code></pre>
+<p>applyBeanPostProcessorsBeforeInstantiation(targetType, beanName)方法的ibp.postProcessBeforeInstantiation(beanClass, beanName)执行的就是AbstractAutoProxyCreator.postProcessBeforeInstantiation()</p>
+<pre><code>@Override
+	public Object postProcessBeforeInstantiation(Class&lt;?&gt; beanClass, String beanName) {
+		Object cacheKey = getCacheKey(beanClass, beanName);
+
+		if (!StringUtils.hasLength(beanName) || !this.targetSourcedBeans.contains(beanName)) {
+			if (this.advisedBeans.containsKey(cacheKey)) {
+				return null;
+			}
+// isInfrastructureClass(beanClass)会判断当前bean是否是基础类型的Advice、Pointcut、Advisor、AopInfrastructureBean或者是否是切面(@Aspect)
+//如果是就会把bean添加到advisedBeans集合中
+// 因为MyAspectJ属于@Aspect，所以会被添加到advisedBeans中
+			if (isInfrastructureClass(beanClass) || shouldSkip(beanClass, beanName)) {
+				this.advisedBeans.put(cacheKey, Boolean.FALSE);
+				return null;
+			}
+		}
+		......
+
+		return null;
+	}
+</code></pre>
+<p>#####切面类实例化的其他步骤与普通Bean的流程一样</p>
+<h2 id="切面类myaspectj的实例化过程不同点在于执行到了object-bean-resolvebeforeinstantiationbeanname-mbdtouse时该bean会被保存到advisedbeans中保存了aop的增强信息后面的目标方法创建代理对象需要到这里找到增强的通知方法">#####切面类(MyAspectJ)的实例化过程不同点在于执行到了Object bean = resolveBeforeInstantiation(beanName, mbdToUse)时该Bean会被保存到advisedBeans中(保存了AOP的增强信息，后面的目标方法创建代理对象需要到这里找到增强的通知方法)</h2>
+<p>#目标方法类(MyAopBean)的创建过程<br>
+在6.3.4.4调用initializeBean(beanName, exposedObject, mbd)的applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName)执行后置处理器的后置方法时，会执行<br>
+AbstractAutoProxyCreator.postProcessAfterInitialization()方法</p>
+<pre><code>	@Override
+	public Object postProcessAfterInitialization(@Nullable Object bean, String beanName) {
+		if (bean != null) {
+			Object cacheKey = getCacheKey(bean.getClass(), beanName);
+			if (this.earlyProxyReferences.remove(cacheKey) != bean) {
+                        // 如果需要就进行包装，这个方法处理创建代理对象流程
+				return wrapIfNecessary(bean, beanName, cacheKey);
+			}
+		}
+		return bean;
+	}
+</code></pre>
+<p>进入wrapIfNecessary(bean, beanName, cacheKey)方法</p>
+<pre><code>protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
+		if (StringUtils.hasLength(beanName) &amp;&amp; this.targetSourcedBeans.contains(beanName)) {
+			return bean;
+		}
+		if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
+			return bean;
+		}
+		if (isInfrastructureClass(bean.getClass()) || shouldSkip(bean.getClass(), beanName)) {
+			this.advisedBeans.put(cacheKey, Boolean.FALSE);
+			return bean;
+		}
+
+		// 如果有当前Bean所要的增强(通知方法)，就创建代理对象。我们在MyAspectJ切面类上定义了4个增强方法(通知方法)，这里会get到，看下图
+		Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
+		// 如果获取到通知方法，就创建代理对象
+                if (specificInterceptors != DO_NOT_PROXY) {
+                   // 把当前目标方法类放入advisedBeans中，true表示做了增强处理
+			this.advisedBeans.put(cacheKey, Boolean.TRUE);
+                  // 开始创建代理对象
+                  // spring会自动决定使用JdkDynamicAopProxy(config) jdk动态代理
+                  //或者ObjenesisCglibAopProxy(config) cglib的动态代理来创建
+			Object proxy = createProxy(
+					bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
+			this.proxyTypes.put(cacheKey, proxy.getClass());
+                      // 返回代理对象
+			return proxy;
+		}
+
+		this.advisedBeans.put(cacheKey, Boolean.FALSE);
+		return bean;
+	}
+</code></pre>
+<p>1 2 3 4是我们自己定义切面类(MyAspectJ)上的增强方法<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-2.jpg" alt="getAdvicesAndAdvisorsForBean获取到的通知方法" loading="lazy"></p>
+<p>#####目标方法类(MyAopBean)的创建过程在6.3.4.4调用initializeBean(beanName, exposedObject, mbd)的applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName)执行后置处理器的后置方法时，会执行AbstractAutoProxyCreator.postProcessAfterInitialization()方法创建代理对象并返回。<br>
+这里就把目标类的Bean(代理对象)创建好了，以后获取这个Bean时都是获取代理对象。</p>
+<hr>
+<p>#MyAopBean创建好后，分析目标方法vp()是如何执行的(是通过责任链模式调用来执行的)<br>
+把断点打到了vp()方法，Step into进入了<br>
+org.springframework.aop.framework.CglibAopProxy.DynamicAdvisedInterceptor#intercept<br>
+说明这个intercept拦截目标方法的执行，做了一些处理</p>
+<pre><code>public Object intercept(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+			......
+				List&lt;Object&gt; chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
+				Object retVal;
+				// 如果没有增强方法，就执行这里(这里是通过反射直接调用目标方法)
+				if (chain.isEmpty() &amp;&amp; Modifier.isPublic(method.getModifiers())) {
+					Object[] argsToUse = AopProxyUtils.adaptArgumentsIfNecessary(method, args);
+					retVal = methodProxy.invoke(target, argsToUse);
+				}
+				else {
+					// chain的list有增强的方法，就创建方法的代理并执行proceed()
+					retVal = new CglibMethodInvocation(proxy, target, method, args, targetClass, chain, methodProxy).proceed();
+				}
+				retVal = processReturnType(proxy, target, method, retVal);
+				return retVal;
+			}
+			finally {
+				if (target != null &amp;&amp; !targetSource.isStatic()) {
+					targetSource.releaseTarget(target);
+				}
+				if (setProxyContext) {
+					// Restore old proxy.
+					AopContext.setCurrentProxy(oldProxy);
+				}
+			}
+		}
+</code></pre>
+<p>#####1.调用List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass)获取将要执行的目标方法拦截器链(就是增强方法(通知))<br>
+  1.1)获取并遍历所有的Advisor(增强器),将其转为Interceptor并返回。<br>
+这里获取到5个增强，一个默认的ExposeInvocationInterceptor 和 4个自定义的aop通知，如下图<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-3.jpg" alt="image.png" loading="lazy"><br>
+#####2.获取到拦截器链后调用retVal = new CglibMethodInvocation(proxy, target, method, args, targetClass, chain, methodProxy).proceed();创建CglibMethodInvocation对象并调用proceed()触发拦截器链(org.springframework.aop.framework.ReflectiveMethodInvocation#proceed)<br>
+#####3.分析proceed方法的执行</p>
+<pre><code>public Object proceed() throws Throwable {
+		//  currentInterceptorIndex 默认为-1，每执行一次proceed()都会+1，没有拦截器(通知方法)或者执行最后一个拦截器执行proceed()方法时，都会执行目标方法
+        //this.interceptorsAndDynamicMethodMatchers是一个list集合，存储了上面获取到的5个拦截器(通知方法)
+		if (this.currentInterceptorIndex == this.interceptorsAndDynamicMethodMatchers.size() - 1) {
+                        // invokeJoinpoint是执行目标方法
+			return invokeJoinpoint();
+		}
+           // 获取++this.currentInterceptorIndex坐标的拦截器
+		Object interceptorOrInterceptionAdvice =
+				this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
+		}
+            ......忽略部份代码
+		else {
+			// It's an interceptor, so we just invoke it: The pointcut will have
+			// been evaluated statically before this object was constructed.
+			return ((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this);
+		}
+	}
+</code></pre>
+<p>  3.1)第一次进入proceed方法，currentInterceptorIndex为-1，this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);获取坐标为0的通知方法(ExposeInvocationInterceptor  默认的增强器)<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-4.jpg" alt="第一次调用proceed" loading="lazy"><br>
+  3.2)然后走到((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this)，将增强器转成MethodInterceptor执行invoke(this)，执行的是ExposeInvocationInterceptor.invoke()，发现调用的还是mi.proceed()方法(上面传参是this，所以这方法还是ReflectiveMethodInvocation#proceed)<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-5.jpg" alt="ExposeInvocationInterceptor.invoke()" loading="lazy"><br>
+  3.3)又回到ReflectiveMethodInvocation#proceed方法，此时currentInterceptorIndex为0，不等于(5-1)，会继续执行this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);获取坐标为<strong>1</strong>的通知方法(AspectJAfterThrowingAdvice(异常通知 @AfterThrowing))<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-6.jpg" alt="第二次调用proceed" loading="lazy"><br>
+  3.4)然后又走到((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this)，这次执行的是异常通知的invoke，AspectJAfterThrowingAdvice#invoke()，它又会执行mi.proceed()<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-7.jpg" alt="AspectJAfterThrowingAdvice.invoke" loading="lazy"><br>
+  3.5)AspectJAfterThrowingAdvice#invoke()调用mi.proceed()回到ReflectiveMethodInvocation#proceed方法此时currentInterceptorIndex为1，不等于(5-1)，会继续执行this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);获取坐标为2的通知方法(AfterReturningAdviceInterceptor (返回通知 @AfterReturning 目标方法正常返回之后调用))<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-8.jpg" alt="第三次调用proceed" loading="lazy"><br>
+  3.6)然后又走到((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this)，这次执行的是返回通知的invoke，AfterReturningAdviceInterceptor#invoke，它又会先执行mi.proceed()<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-9.jpg" alt="AfterReturningAdviceInterceptor.invoke" loading="lazy"><br>
+3.7)AfterReturningAdviceInterceptor#invoke()调用mi.proceed()回到ReflectiveMethodInvocation#proceed方法此时currentInterceptorIndex为2，不等于(5-1)，会继续执行this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);获取坐标为3的通知方法(AspectJAfterAdvice(后置通知 @After 在目标方法运行结束之后运行之后调用，不管是否有异常))<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-10.jpg" alt="第四次调用proceed" loading="lazy"><br>
+3.8)然后又走到((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this)，这次执行的是后置通知的invoke，AspectJAfterAdvice#invoke，它又会先执行mi.proceed()<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-11.jpg" alt="AspectJAfterAdvice.invoke" loading="lazy"><br>
+3.9)AspectJAfterAdvice#invoke()调用mi.proceed()回到ReflectiveMethodInvocation#proceed方法此时currentInterceptorIndex为3，不等于(5-1)，会继续执行this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);获取坐标为4的通知方法(MethodBeforAdivceInterceptor(前置通知 @Before 在目标方法运行之前调用))<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-12.jpg" alt="advice.before" loading="lazy"><br>
+3.10)然后又走到((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this)，这次执行的是前置通知的invoke，MethodBeforeAdviceInterceptor#invoke，它会先调用this.advice.before(mi.getMethod(), mi.getArguments(), mi.getThis())执行前置通知的方法(@Before)<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-13.jpg" alt="MethodBeforAdivceInterceptor#invoke" loading="lazy"><br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-14.jpg" alt="前置通知" loading="lazy"><br>
+3.11)执行完前置通知的方法后，会再次调用mi.proceed()，此时currentInterceptorIndex为4，等于(5-1)，所以会执行invokeJoinpoint()(这个方法就是执行目标方法的，通过this.methodProxy.invoke(this.target, this.arguments))<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-15.jpg" alt="第五次调用proceed" loading="lazy"><br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-16.jpg" alt="目标方法(打印出运行vp方法)" loading="lazy"><br>
+3.12)执行完ruturn invokeJoinpoint()(目标方法之后)，MethodBeforeAdviceInterceptor.invoke()就return了,然后回到调用AspectJAfterAdvice.invoke((回到上一级调用MethodBeforeAdviceInterceptor的方法))，这时会调用invokeAdviceMethod(getJoinPointMatch(), null, null)，执行后置方法(不管是否目标方法有异常都会执行到)<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-17.jpg" alt="AspectJAfterAdvice.invoke" loading="lazy"><br>
+<img src="C:/Users/PC/Pictures/Saved%20Pictures/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-18.jpg" alt="image.png" loading="lazy"></p>
+<p>3.13)执行完AspectJAfterAdvice.invoke()之后，这时目标方法抛出异常了(int i = 1/0;)，AfterReturningAdviceInterceptor#invoke就不会执行this.advice.afterReturning(retVal, mi.getMethod(), mi.getArguments(), mi.getThis())了(如果正常返回就会执行this.advice.afterReturning来调用返回通知)，它会把异常抛给上一层(AspectJAfterThrowingAdvice)，这时回到<br>
+AspectJAfterThrowingAdvice#invoke(回到上一级调用AfterReturning的方法)，会调用invokeAdviceMethod(getJoinPointMatch(), null, ex);执行异常通知方法，然后throw ex抛出异常给上一层(ExposeInvocationInterceptor)<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-19.jpg" alt="image.png" loading="lazy"><br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-20.jpg" alt="异常通知" loading="lazy"><br>
+3.14)执行完异常通知方法，会回到最早的ExposeInvocationInterceptor增强器方法中，执行完finally之后，就会抛出异常给jvm<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-21.jpg" alt="image.png" loading="lazy"><br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-22.jpg" alt="image.png" loading="lazy"><br>
+#####AOP目标方法执行原理分析完毕，使用链式调用，从坐标为0的增强器一直调到最后一个增强器，然后最后一个增强器执行完后，返回上一个增强器继续执行操作...直到返回到第一个增强器执行完成，增强了的目标方法就执行完成<br>
+#####目标方法(MyAopBean.vp)执行的流程图<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E6%BA%90%E7%A0%81%E4%B9%8BBean-23.jpg" alt="image.png" loading="lazy"></p>
+<p>AOP启动总结：<br>
+spring容器启动时调用refresh()刷新容器(具体spring容器启动的流程请看<a href="https://www.jianshu.com/writer#/notebooks/31229867/notes/54723874/preview">https://www.jianshu.com/writer#/notebooks/31229867/notes/54723874/preview</a><br>
+)</p>
+<ul>
+<li><strong>refresh()# invokeBeanFactoryPostProcessors(beanFactory)，会将spring能感知到的(加了注解的)所有Bean的定义信息保存到容器中。（AnnotationAwareAspectJAutoProxyCreator、MyAspectJ、MyAopBean的定义信息都是这时候注册到容器的）</strong></li>
+<li><strong>refresh()# registerBeanPostProcessors(beanFactory)会创建并初始化后置处理器并注册到容器中，因为AnnotationAwareAspectJAutoProxyCreator属于InstantiationAwareBeanPostProcessor类型的后置处理器，所以在这时会创建AnnotationAwareAspectJAutoProxyCreator的实例注册到容器中</strong></li>
+<li><strong>refresh()# finishBeanFactoryInitialization(beanFactory) 会初始化(创建Bean的实例)所有剩下的单实例Bean，MyAspectJ类和MyAopBean类在这时会创建Bean实例并保存到容器中</strong></li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[spring常用注解作用与常用接口与后置处理器]]></title>
+        <id>https://yzx2018.github.io/mypage/post/spring-chang-yong-zhu-jie-zuo-yong-yu-chang-yong-jie-kou-yu-hou-zhi-chu-li-qi/</id>
+        <link href="https://yzx2018.github.io/mypage/post/spring-chang-yong-zhu-jie-zuo-yong-yu-chang-yong-jie-kou-yu-hou-zhi-chu-li-qi/">
+        </link>
+        <updated>2019-07-12T07:30:59.000Z</updated>
+        <content type="html"><![CDATA[<p><strong>从spring2.5之后，spring注解驱动开发慢慢取代了Spring的xml配置文件的作用，而且目前流行的SpringBoot开发也是基于spring注解驱动做扩展的，所以想要理解好SpringBoot，就必须掌握一些spring的注解驱动。</strong></p>
+<blockquote>
+<p>@Configuration+@Bean<br>
+用于创建bean并注册到spring的IOC容器中<br>
+如果我们想将Person初始化并加载到IOC容器中</p>
+</blockquote>
+<pre><code class="language-java">package com.example.demo;
+public class Person {
+    private String name;
+    private int age;
+}
+</code></pre>
+<p>以前xml的做法是</p>
+<pre><code class="language-java">&lt;bean id=&quot;person&quot; class=&quot;com.example.demo.Person&quot;&gt;
+   &lt;property name=&quot;name&quot; value=&quot;小小&quot;&gt;
+   &lt;property name=&quot;age&quot; value=&quot;23&quot;&gt;
+&lt;bean&gt;
+</code></pre>
+<p>现在使用spring注解的做法是</p>
+<pre><code class="language-java">// 等同于xml配置文件
+@Configuration  //定义一个配置类
+public class MyConfig{
+    // 给容器注册一个Bean，如果不指定bean的id，默认为方法名
+  @Bean
+  //@Bean(&quot;persionX&quot;) 给bean指定ID名称
+  public Person person(){
+    new Person(&quot;小小&quot;,23)
+  }
+}
+</code></pre>
+<hr>
+<blockquote>
+<p>@Componentscan<br>
+<strong>指定包的扫描范围，在指定包及其子包下的类只要标注了@Controller、@Service、@Repository、@Component等注解的类都会被注册到IOC容器中，@Componentscan(value=&quot;com.example.demo&quot;)注解加到在配置类(加了@Configuration的类或springboot的配置类(启动类))上，等同于xml配置的&lt;context:component-scan base-package=&quot;com.example.demo&quot;&gt;&lt;/context:component-scan&gt;</strong><br>
+<strong>@Componentscan的一些参数用法</strong></p>
+</blockquote>
+<pre><code class="language-java">excludeFilters过滤掉一些不需要被注册的类,FilterType.ANNOTATION以注解的类型过滤，
+过滤掉标注了@Controller的类,标注了@Controller注解的类不会被注册到IOC容器中
+//
+@Componentscan(value=&quot;com.example.demo&quot;,excludeFilters={
+    @Filter(type=FilterType.ANNOTATION,classes={Controller.class})
+})
+// ----------------------------------------------------------------------
+includeFilters 只包含，只注册满足扫描规则的类，只注册标注了@Service的类，
+注意:使用includeFilters还需要加上useDefaultFilters=false禁用掉默认的过滤规则，includeFilters才会生效，因为默认是扫描所有的注解驱动
+//
+@Componentscan(value=&quot;com.example.demo&quot;,includeFilters={
+    @Filter(type=FilterType.ANNOTATION,classes={Service.class})
+},useDefaultFilters=false)
+// ---------------------------
+FilterType的过滤规则类型
+FilterType.ANNOTATION : 按照注解过滤
+FilterType.ASSIGNABLE_TYPE：按照指定类型过滤
+//
+下面定义的FilterType.ASSIGNABLE_TYPE,classes={Hello.class}表示，只要是Hello类或者其子类都会被加载到IOC容器中
+@Componentscan(value=&quot;com.example.demo&quot;,includeFilters={
+    @Filter(type=FilterType.ANNOTATION,classes={Service.class}),
+   @Filter(type=FilterType.ASSIGNABLE_TYPE,classes={Hello.class})
+},useDefaultFilters=false))
+//
+FilterType.ASPECTJ：使用ASPECTJ表达式过滤
+FilterType.REGEX：使用正则表达式过滤
+//-----------------------------------------------------------------------
+FilterType.CUSTOM：使用自定义规则
+/**
+*使用FilterType.CUSTOM自定义扫描规则，编写自定义类MyTypeFilter，
+*需要实现org.springframework.core.type.filter.TypeFilter接口，重写match方法
+*如果match方法返回ture，则满足条件，当前扫描的类会被加载到IOC容器中，false则反之
+*/ 
+@Componentscan(value=&quot;com.example.demo&quot;,includeFilters={
+    @Filter(type=FilterType.CUSTOM,classes={MyTypeFilter.class})
+},useDefaultFilters=false))
+// --------------------------------------
+// 自定义的TypeFilter类，如果match方法返回ture，则满足条件，当前扫描的类会被加载到IOC容器中，false则反之
+public class MyTypeFilter implements TypeFilter {
+    /**
+     *
+     * @param metadataReader：读取到的当前正在扫描的类的信息
+     * @param metadataReaderFactory：可以获取到其他任何类的信息
+     */
+    @Override
+    public boolean match(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory) throws IOException {
+        // 获取当前正在扫描的类的信息
+        ClassMetadata classMetadata = metadataReader.getClassMetadata();
+        // 获取当前类的全类名(包+类名)
+        String className = classMetadata.getClassName();
+        System.out.println(&quot;当前扫描的类是：&quot;+className);
+        // 只有全类名包含Controller字符串的类才满足条件
+        if (className.contains(&quot;Controller&quot;)){
+            return true;
+        }
+        return false;
+    }
+}
+</code></pre>
+<p>java8之后ComponentScan注册加了@Repeatable(ComponentScans.class)，可以直接在配置类上标注多个@Componentscan，在java8之前想配置多个@Componentscan扫描，需要用@ComponentScans</p>
+<pre><code class="language-java">@Repeatable(ComponentScans.class)
+public @interface ComponentScan {}
+</code></pre>
+<blockquote>
+<p>#@Scope<br>
+指定bean的实例是单例还是多例，或者作用域，有4个属性值。<strong>默认为@Scope(&quot;singleton&quot;) 单例</strong><br>
+1.prototype：指定当前bean为多实例：spring容器启动时不会创建对象放到容器中，而是每次需要调用该bean时才会创建<br>
+2.singleton：指定当前bean为单例(默认)，spring容器启动时就会创建对象加载到容器中，每次调用该bean时直接从容器(map)中拿<br>
+3.request：同一个request请求使用同一个bean实例，只在web应用下生效<br>
+4.session：同一个session请求使用同一个bean实例，只在web应用下生效</p>
+</blockquote>
+<blockquote>
+<p>#@Lazy<br>
+该注解的作用是将bean创建设置为懒加载，针对于单例，spring容器启动时就会创建对象加载到容器中，如果在类上加上@Lazy注解，第一次调用该bean时才会去创建，然后放到spring容器中。之后的调用都从容器中获取</p>
+</blockquote>
+<blockquote>
+<p>#@Conditional<br>
+按照一定的条件进行判断，满足条件就给容器注册bean<br>
+标注在类或方法(一般是用于注册bean的方法(加了@Bean注册))上，只有满足条件才会给容器注册这个bean<br>
+自定义一个类(HelloConditional)通过实现Condition重写matches方法来编写判断条件的逻辑，matches方法返回true表示满足条件，就会给容器注册bean(就会执行hello方法，给容器注册Hello的bean)</p>
+</blockquote>
+<pre><code class="language-java">@Configuration
+public class MyConfig {
+    @Bean
+    @Conditional({HelloConditional.class})
+    public Hello hello(){
+        return new Hello();
+    }
+}
+// --------------------------------------------
+//自定义条件判断的类，实现Condition接口的matches方法，该方法返回true表示满足条件
+public class HelloConditional implements Condition {
+    /**
+     *
+     * @param context :判断条件使用的上下文
+     * @param metadata :注解信息
+     * @return
+     */
+    @Override
+    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        return true;
+    }
+}
+</code></pre>
+<blockquote>
+<p>#@Import<br>
+spring注册中给容器导入组件有几种方式，其中一种@Import，可以给容器快速导入组件 bean的id为全类名<br>
+@Import的使用方式<br>
+第一种使用方式：在配置类上加入@Import({Hello.class})，可以快速的把Hello的bean加入到容器中，bean的id为全类名。<br>
+第二种使用方式：@Import中传入实现了ImportSelector接口的类，并重写selectImports方法，这个方法的返回值就是需要导入到IOC容器的类的全类名<br>
+第三种使用方式：@Import中传入实现了ImportBeanDefinitionRegistrar接口的类，并重写registerBeanDefinitions方式来手工注册bean(看下面代码例子)</p>
+</blockquote>
+<pre><code class="language-java">方式一，将Hello类注册到IOC容器
+@Configuration
+// 将hello加入到IOC容器中
+@Import({Hello.class})
+public class MyConfig {
+}
+方式二,将Hello类注册到IOC容器(不变)，MyImportSelector实现了ImportSelector 接口，会把返回值所有类注册到IOC容器中
+@Configuration
+// 将hello和MyImportSelector返回的组数中的所有类加入到IOC容器中
+@Import({Hello.class,MyImportSelector.class})
+public class MyConfig {
+}
+实现了ImportSelector的类
+public class MyImportSelector implements ImportSelector {
+    /**
+     *
+     * @param importingClassMetadata :当前标注了@Import注解的类(当前正在扫描的类)的所有注解
+     * @return 返回值就是需要导入到容器中的组件数组(全类名)
+     */
+    @Override
+    public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+        return new String[]{&quot;com.example.myspringbootstartautoconfigurer.HelloImport&quot;};
+    }
+}
+
+// ------------------------------
+方式三，通过实现ImportBeanDefinitionRegistrar接口手工将MyBean类注册到容器中，bean id为myBean666
+@Import({MyImportBeanDefinitionRegistrar.class})
+public class MyConfig {
+}
+// --
+ImportBeanDefinitionRegistrar的实现类
+public class MyImportBeanDefinitionRegistrar implements ImportBeanDefinitionRegistrar {
+
+    /**
+     *
+     * @param importingClassMetadata : 当前加了@Import类的注解信息
+     * @param registry :BeanDefinition注册类  可以把需要注册到容器的bean通过registry.registerBeanDefinition方法手工注册到容器中
+     */
+    @Override
+    public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+        // bean的定义信息
+        RootBeanDefinition rootBeanDefinition = new RootBeanDefinition(MyBean.class);
+        // 手工注册bean  第一个参数为bean的id，第二个为beanDefinition  bean的定义信息
+        registry.registerBeanDefinition(&quot;myBean666&quot;,rootBeanDefinition);
+    }
+}
+</code></pre>
+<p>给容器注册组件(bean)的几种方式<br>
+1.包扫描+组件标注注解(@Service、@Controller、@Repository、@Componet)，这种方式用于导入自己写的类<br>
+2.@Bean方式导入，常用入导入第三方包里面的类   默认bean id为导入执行的方法名<br>
+3.@Import方式导入(有三种用法)，默认的bean id为全类名<br>
+4.通过FactoryBean(工厂bean)</p>
+<blockquote>
+<p>#通过FactoryBean(工厂bean)给容器注册bean<br>
+通过实现FactoryBean<T>接口来创建bean<br>
+1.如果通过applicationContext.getBean(&quot;helloFactoryBean &quot;)来获取，获取到的对象是工厂bean调用getObject创建的对象，即Hello对象<br>
+2.要获取工厂bean本身(HelloFactoryBean对象)，需要在id前面加一个&amp;,即<br>
+applicationContext.getBean(&quot;&amp;helloFactoryBean &quot;)。因为spring的BeanFactory定义了来获取工厂bean本身<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E5%B8%B8%E7%94%A8-1.jpg" alt="image" loading="lazy"><br>
+3.如果通过@Autowired来获取的是工厂bean本身(HelloFactoryBean对象)<br>
+@Autowired<br>
+private HelloFactoryBean helloFactoryBean;</p>
+</blockquote>
+<pre><code>@Component
+public class HelloFactoryBean implements FactoryBean&lt;Hello&gt; {
+    // 返回一个对象，这个对象会被注册到容器中
+    @Override
+    public Hello getObject() throws Exception {
+        return new Hello();
+    }
+    // 返回对应的类型
+    @Override
+    public Class&lt;?&gt; getObjectType() {
+        return null;
+    }
+    // 是否单例 true为单例
+    // false是多例，每次获取都会创建一个实例
+    @Override
+    public boolean isSingleton() {
+        return false;
+    }
+}
+</code></pre>
+<blockquote>
+<p>#@PropertySource<br>
+读取外部配置文件中的k/v保存到运行环境变量(environment)中<br>
+#@Value()给属性赋值，可以读取到环境变量(environment)中的值</p>
+</blockquote>
+<pre><code>// 读取hello.properties配置文件的信息并保存到运行环境变量(environment)中 
+@PropertySource({&quot;classpath:/hello.properties&quot;})
+@Configuration
+public class MyConfig {
+}
+// @Value()读取配置文件中的值，下面代码表示如果配置文件中有hello.name的key，就读取它的value并赋值给name，没有就默认将666赋值给name
+@Value(&quot;${hello.name:666}&quot;)
+public String name;
+</code></pre>
+<hr>
+<p>#自动装配注解</p>
+<blockquote>
+<p>#@Autowired<br>
+1.使用@Autowired自动注入(默认required=ture，表示必须注入，找不到对应的组件就会报错)，默认优先按照类型去容器中找对应的组件进行注入<br>
+2.如果容器中有多个相同类型的组件(bean)，会通过属性的名称作为组件的id去容器中查找<br>
+3.也可以通过@Qualifier指定组件的id进行装配</p>
+</blockquote>
+<pre><code>public class HelloService {
+默认会先找HelloProperties这个类型进行注入
+如果容器中有多个HelloProperties类型的bean，会通过属性的名称作为组件的id去容器中查找
+也可以通过@Qualifier指定组件的id进行装配    (默认为@Qualifier(&quot;属性名&quot;))
+    @Qualifier(&quot;helloProperties2&quot;)      // 默认为@Qualifier(&quot;属性名&quot;)
+    @Autowired
+    HelloProperties helloProperties;
+}
+</code></pre>
+<blockquote>
+<p>#@Autowired使用在map&lt;String,T&gt;上<br>
+会自动将所有T类型的bean保存到map中，key为bean的id，value为bean对象</p>
+</blockquote>
+<pre><code>自动将所有Hello类型(包括子类)的bean保存到map中，key为bean的id，value为bean对象
+public class HelloService {
+    @Autowired
+    private  Map&lt;String,HelloProperties&gt; map;
+}
+</code></pre>
+<blockquote>
+<p>#@Autowired在构造方法上的使用，可以将构造方法上的参数自动注入<br>
+这种方式是在执行构造方法的时候就已经把参数注入了，而@Autowired写在属性上(上面的例子)，是执行完构造方法后才注入的</p>
+</blockquote>
+<pre><code>public class HelloService {
+ 默认不写@Autowired也是能注入的，
+ 也可以写在参数前面  @Autowired HelloProperties helloProperties
+     @Autowired       
+    public HelloService(HelloProperties helloProperties ){
+        System.out.println(helloProperties );
+    }
+
+}
+</code></pre>
+<blockquote>
+<p>#@Autowired + @Bean，注册组件时传入的参数自动注入</p>
+</blockquote>
+<pre><code>@Configuration
+public class MyConfig {
+    @Autowired    //自动注入hello参数   默认不加@Autowired也会自动注入
+    @Bean()
+    public HelloService helloService(Hello hello){
+        HelloService helloService = new HelloService();
+        helloService.setHello(hello);
+        return helloService;
+    }
+}
+</code></pre>
+<hr>
+<p>#管理Bean的生命周期<br>
+-bean创建-&gt;初始化-&gt;销毁</p>
+<blockquote>
+<p>#自定义bean的初始化和销毁方法<br>
+#####1.通过@Bean(initMethod=&quot;&quot;,destroyMethod=&quot;&quot;)指定初始化和销毁时的方法<br>
+#####构造函数：创建实例时调用，单实例对象在容器启动时就会创建bean(调用构造函数)，多实例对象在每次获取时才调用<br>
+#####初始化方法：对象创建(调用构造函数)完成并赋值后调用会调用初始化方法<br>
+#####销毁方法：对于单例对象容器正常关闭时调用，但多实例对象是不会调用销毁方法的</p>
+</blockquote>
+<pre><code>@Configuration
+public class MyConfig {
+    // 创建Hello的bean实例，通过initMethod指定初始化方法，destroyMethod指定销毁方法 
+    @Bean(initMethod = &quot;init&quot;,destroyMethod = &quot;destroy&quot;)
+    public Hello hello(){
+        return new Hello();
+    }
+}
+// Hello类
+public class Hello {
+    public String name;
+    public Hello(){
+// 无参构造方法，创建bean时就调用
+        System.out.println(&quot;hello构造方法执行......&quot;);
+    }
+    // 自定义Hello的的初始化执行方法  在@Bean中指定这个方法为初始化方法即可
+    public void init(){
+        System.out.println(&quot;init......&quot;);
+    }
+    // 自定义Hello的的销毁执行方法  在@Bean中指定这个方法为销毁方法即可
+    public void destroy(){
+        System.out.println(&quot;destroy.......&quot;);
+    }
+
+}
+</code></pre>
+<blockquote>
+<p>#####2.通过实现InitializingBean接口的afterPropertiesSet方法自定义初始化和DisposableBean的destroy方法销毁</p>
+</blockquote>
+<pre><code>@Component
+public class HelloL implements InitializingBean,DisposableBean{
+    public HelloL(){
+        System.out.println(&quot;HelloL......构造方法&quot;);
+    }
+    // 销毁时调用
+    @Override
+    public void destroy() throws Exception {
+        System.out.println(&quot;HelloL....destroy&quot;);
+    }
+    // 对象创建并且属性赋值完之后，调用的初始化方法
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        System.out.println(&quot;HelloL....afterPropertiesSet&quot;);
+    }
+}
+</code></pre>
+<blockquote>
+<p>#####3.使用JSR520的注解自定义初始化和销毁方法<br>
+@PostConstruct：在bean创建并完成赋值后执行的初始化方法<br>
+@PreDestroy：在容器销毁bean之前执行的方法</p>
+</blockquote>
+<pre><code>@Component
+public class HelloPost {
+
+    public HelloPost(){
+        System.out.println(&quot;HelloPost......构造方法&quot;);
+    }
+//在bean创建并完成赋值后执行的初始化方法
+    @PostConstruct
+    public void init(){
+        System.out.println(&quot;HelloPost.......@PostConstruct&quot;);
+    }
+//在容器销毁bean之前执行的方法
+    @PreDestroy
+    public void destroy(){
+        System.out.println(&quot;HelloPost.......@PreDestroy&quot;);
+    }
+}
+</code></pre>
+<hr>
+<p>#后置处理器<br>
+#####场景：比如在bean创建时将spring的一些底屋组件注入到bean中，或者初始化前后进行拦截处理</p>
+<blockquote>
+<p>#BeanPostProcessor接口(Bean的后置处理器)  ，bean创建对象初始化前后进行拦截处理<br>
+postProcessBeforeInitialization方法：在每个bean的初始化方法调用之前会调用这个方法<br>
+postProcessAfterInitialization方法：在每个bean的初始化方法调用之后会调用这个方法<br>
+#####自定义后置处理器，实现BeanPostProcessor接口，会处理所有的bean</p>
+</blockquote>
+<pre><code>@Component
+public class MyBeanPostProcessor implements BeanPostProcessor {
+
+// 在每个bean的初始化方法调用之前都会调用执行方法
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        System.out.println(&quot;postProcessBeforeInitialization...&quot;+beanName);
+        return bean;
+    }
+//在每个bean的初始化方法调用之前都会调用执行方法
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        System.out.println(&quot;postProcessAfterInitialization...&quot;+beanName);
+        return bean;
+    }
+}
+</code></pre>
+<p>#Aware注入spring底层组件(其原理是通过后置处理器来实现的)<br>
+applicationContextAeare和EmbeddedValueResolverAeare都是通过ApplicationContextAwareProcessor后置处理器来实现的</p>
+<blockquote>
+<p>如果需要使用spring底层组件如applicationContext、BeanFactroy、EmbeddedValueResolver等，可以通过实现对应的xxxAeare接口,在创建对象时会调用接口规定的方法注入相关组件(比BeanPostProcessor的方法<strong>先</strong>执行)。</p>
+</blockquote>
+<pre><code>@Component
+public class HelloPost implements ApplicationContextAware,BeanNameAware,EmbeddedValueResolverAware{
+    private ApplicationContext applicationContext;
+    public HelloPost(){
+        System.out.println(&quot;HelloPost......构造方法&quot;);
+    }
+    @PostConstruct
+    public void init(){
+        System.out.println(&quot;HelloPost.......@PostConstruct&quot;);
+    }
+    @PreDestroy
+    public void destroy(){
+        System.out.println(&quot;HelloPost.......@PreDestroy&quot;);
+    }
+
+    // 注入ApplicationContext对象
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        System.out.println(&quot;appilcation...................&quot;);
+        this.applicationContext=applicationContext;
+    }
+
+    // 注入bean的名称
+    @Override
+    public void setBeanName(String name) {
+        System.out.println(name);
+    }
+
+    // 注入StringValueResolver，这个类的作用是用来解析字符串的占位符
+    @Override
+    public void setEmbeddedValueResolver(StringValueResolver resolver) {
+        System.out.println(resolver.resolveStringValue(&quot;当前操作系统：${os.name}&quot;));
+    }
+}
+</code></pre>
+<hr>
+<p>#Bean工厂后置处理器</p>
+<blockquote>
+<p>#BeanFactoryPostProcessor接口<br>
+在Bean标准初始化之后调用(所有的baen定义信息已经保存加载到beanFactory,但是bean的实例还未创建)，可以定制和修改BeanFactory的内容</p>
+</blockquote>
+<pre><code>/**
+ * 在BeanFactory标准初始化之后(所有的baen定义信息已经保存加载到beanFactory,但是bean的实例还未创建)调用
+ * 意思就是在baen定义信息(类名,socpe作用域，类属性等信息)加载完成之后调用(此时bean的实例还未创建)
+ */
+@Component
+public class MyBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        // 获取所有bean定义的id
+        String[] beanDefinitionNames = beanFactory.getBeanDefinitionNames();
+    }
+}
+</code></pre>
+<blockquote>
+<p>#BeanDefinitionRegistryPostProcessor接口<br>
+bean定义信息(BeanDefinitionRegistry)的后置处理器<br>
+这个接口extends BeanFactoryPostProcessor，在bean定义信息将要被加载时调用(bean实例还未创建)，可手动把某个bean的定义信息加载进BeanDefinitionRegistry</p>
+</blockquote>
+<pre><code>@Component
+public class MyBeanDefinitionRegistryPostProcessor implements BeanDefinitionRegistryPostProcessor {
+    // BeanDefinitionRegistry是 Bean定义信息的存储中心
+    // 以后BeanFactory就是按BeanDefinitionRegistry里面保存的每一个bean定义信息来创建bean实例的
+    @Override
+    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+        System.out.println(&quot;postProcessBeanDefinitionRegistry..........bean的数量：&quot;+registry.getBeanDefinitionCount());
+        // 手动将某个bean的定义信息加载到BeanDefinitionRegistry中
+        RootBeanDefinition rootBeanDefinition = new RootBeanDefinition(Hello.class);
+        registry.registerBeanDefinition(&quot;helloBeanDefinition&quot;,rootBeanDefinition);
+    }
+
+  // 这是父类BeanFactoryPostProcessor的方法
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        System.out.println(&quot;子类postProcessBeanFactory..........bean的数量：&quot;+beanFactory.getBeanDefinitionCount());
+
+    }
+}
+</code></pre>
+<p>BeanFactoryPostProcessor是在bean定义信息加载完成后调用<br>
+BeanDefinitionRegistryPostProcessor是在bean定义信息将要加载时调用<br>
+先执行BeanDefinitionRegistryPostProcessor的实现类再执行BeanFactoryPostProcessor的实现类</p>
+<hr>
+<figure data-type="image" tabindex="1"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/spring%E5%B8%B8%E7%94%A8-2.jpg" alt="Bean的生命周期流程图" loading="lazy"></figure>
+<p>创建bean的源码位置<br>
+org.springframework.context.support.AbstractApplicationContext#finishBeanFactoryInitialization<br>
+-&gt;org.springframework.beans.factory.BeanFactory#getBean(java.lang.String, java.lang.Class<T>)<br>
+--&gt;org.springframework.beans.factory.support.AbstractBeanFactory#createBean<br>
+---&gt;org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#doCreateBean<br>
+执行bean对象的实例化<br>
+-&gt;org.springframework.beans.factory.support.AbstractBeanFactory#createBean<br>
+给bean的属性赋值<br>
+org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#populateBean</p>
+<p>initializeBean方法主要做了三个操作1.循环执行后置处理器的的前置方法(applyBeanPostProcessorsBeforeInitialization)、2.再执行初始化方法(invokeInitMethods)，3.再执行后置处理器的的后置方法(applyBeanPostProcessorsAfterInitialization)<br>
+org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#initializeBean(java.lang.String, java.lang.Object, org.springframework.beans.factory.support.RootBeanDefinition)</p>
 ]]></content>
     </entry>
 </feed>
