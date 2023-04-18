@@ -1,92 +1,100 @@
-
 <!DOCTYPE html>
 <html>
   <head>
-    
-<meta charset="utf-8" >
+    <meta charset="utf-8" >
 
 <title>spring常用注解作用与常用接口与后置处理器 | 首页</title>
-<meta name="description" content="温故而知新">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
 
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1681804114105">
 <link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
 
 
 
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
 <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
-<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
 
 
 
+    <meta name="description" content="从spring2.5之后，spring注解驱动开发慢慢取代了Spring的xml配置文件的作用，而且目前流行的SpringBoot开发也是基于spring注解驱动做扩展的，所以想要理解好SpringBoot，就必须掌握一些spring的注解..." />
+    <meta name="keywords" content="" />
   </head>
   <body>
     <div id="app" class="main">
-      <div class="site-header-container">
-  <div class="site-header">
-    <div class="left">
-      <a href="https://yzx2018.github.io/mypage/">
-        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
-      </a>
-      <a href="https://yzx2018.github.io/mypage/">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://yzx2018.github.io/mypage/">
+        <img src="https://yzx2018.github.io/mypage//images/avatar.png?v=1681804114105" class="site-logo">
         <h1 class="site-title">首页</h1>
       </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
     </div>
-    <div class="right">
-      <transition name="fade">
-        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
-      </transition>
-    </div>
-  </div>
-</div>
-
-<transition name="fade">
-  <div class="menu-container" style="display: none;" v-show="menuVisible">
-    <div class="menu-list">
+    <div>
       
         
-          <a href="/" class="menu purple-link">
+          <a href="/" class="site-nav">
             首页
           </a>
         
       
         
-          <a href="/archives" class="menu purple-link">
+          <a href="/archives" class="site-nav">
             归档
           </a>
         
       
         
-          <a href="/tags" class="menu purple-link">
+          <a href="/tags" class="site-nav">
             标签
           </a>
         
       
         
-          <a href="/post/about" class="menu purple-link">
+          <a href="/post/about" class="site-nav">
             关于
           </a>
         
       
     </div>
   </div>
-</transition>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      温故而知新
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
 
 
-      <div class="content-container">
-        <div class="post-detail">
-          
-          <h2 class="post-title">spring常用注解作用与常用接口与后置处理器</h2>
-          <div class="post-info post-detail-info">
-            <span><i class="icon-calendar-outline"></i> 2019-07-12</span>
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">spring常用注解作用与常用接口与后置处理器</h2>
+            <div class="post-date">2019-07-12</div>
             
-          </div>
-          <div class="post-content" v-pre>
-            <p><strong>从spring2.5之后，spring注解驱动开发慢慢取代了Spring的xml配置文件的作用，而且目前流行的SpringBoot开发也是基于spring注解驱动做扩展的，所以想要理解好SpringBoot，就必须掌握一些spring的注解驱动。</strong></p>
+            <div class="post-content" v-pre>
+              <p><strong>从spring2.5之后，spring注解驱动开发慢慢取代了Spring的xml配置文件的作用，而且目前流行的SpringBoot开发也是基于spring注解驱动做扩展的，所以想要理解好SpringBoot，就必须掌握一些spring的注解驱动。</strong></p>
 <blockquote>
 <p>@Configuration+@Bean<br>
 用于创建bean并注册到spring的IOC容器中<br>
@@ -593,45 +601,31 @@ org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#pop
 <p>initializeBean方法主要做了三个操作1.循环执行后置处理器的的前置方法(applyBeanPostProcessorsBeforeInitialization)、2.再执行初始化方法(invokeInitMethods)，3.再执行后置处理器的的后置方法(applyBeanPostProcessorsAfterInitialization)<br>
 org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#initializeBean(java.lang.String, java.lang.Object, org.springframework.beans.factory.support.RootBeanDefinition)</p>
 
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://yzx2018.github.io/mypage/post/spring-rong-qi-qi-dong-yuan-ma-fen-xi/">
+                  <h3 class="post-title">
+                    spring容器启动源码分析
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
           </div>
+
         </div>
-
-        
-          <div class="next-post">
-            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/spring-rong-qi-qi-dong-yuan-ma-fen-xi/">
-              <h3 class="post-title">
-                下一篇：spring容器启动源码分析
-              </h3>
-            </a>
-          </div>
-          
       </div>
-
-      
-
-      <div class="site-footer">
-  <div class="slogan">温故而知新</div>
-  <div class="social-container">
-    
-      
-    
-      
-    
-      
-    
-      
-    
-      
-    
-  </div>
-  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
-</div>
-
-
     </div>
-    <script type="application/javascript">
 
-hljs.initHighlightingOnLoad()
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
 
 var app = new Vue({
   el: '#app',
@@ -641,6 +635,8 @@ var app = new Vue({
 })
 
 </script>
+
+
 
 
 

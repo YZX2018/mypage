@@ -1,438 +1,411 @@
-
+<!DOCTYPE html>
 <html>
   <head>
-    
-<meta charset="utf-8" >
+    <meta charset="utf-8" >
 
 <title>首页</title>
-<meta name="description" content="温故而知新">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
 
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1681804114105">
 <link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
 
 
 
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
 <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
-<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
 
 
 
+    <meta name="description" content="温故而知新">
+    
   </head>
   <body>
     <div id="app" class="main">
-      <div class="site-header-container">
-  <div class="site-header">
-    <div class="left">
-      <a href="https://yzx2018.github.io/mypage/">
-        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
-      </a>
-      <a href="https://yzx2018.github.io/mypage/">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://yzx2018.github.io/mypage/">
+        <img src="https://yzx2018.github.io/mypage//images/avatar.png?v=1681804114105" class="site-logo">
         <h1 class="site-title">首页</h1>
       </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
     </div>
-    <div class="right">
-      <transition name="fade">
-        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
-      </transition>
-    </div>
-  </div>
-</div>
-
-<transition name="fade">
-  <div class="menu-container" style="display: none;" v-show="menuVisible">
-    <div class="menu-list">
+    <div>
       
         
-          <a href="/" class="menu purple-link">
+          <a href="/" class="site-nav">
             首页
           </a>
         
       
         
-          <a href="/archives" class="menu purple-link">
+          <a href="/archives" class="site-nav">
             归档
           </a>
         
       
         
-          <a href="/tags" class="menu purple-link">
+          <a href="/tags" class="site-nav">
             标签
           </a>
         
       
         
-          <a href="/post/about" class="menu purple-link">
+          <a href="/post/about" class="site-nav">
             关于
           </a>
         
       
     </div>
   </div>
-</transition>
-
-
-      <div class="content-container">
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
         
+      
         
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/ru-kou-wang-guan-ji-lu-ji-you-hua/">
-        <h2 class="post-title">入口网关记录及优化</h2>
-      </a>
-      <div class="post-abstract">
+      
         
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2023-03-29</span>
+      
         
-      </div>
+      
+        
+      
     </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/fen-bu-shi-suo-redis-he-zookeeper/">
-        <h2 class="post-title">分布式锁(redis和zookeeper)</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2021-01-02</span>
-        
-      </div>
+    <div class="site-description">
+      温故而知新
     </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/fen-bu-shi-shi-wu-lcn-yu-seata-yuan-li/">
-        <h2 class="post-title">分布式事务LCN与Seata原理</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2020-12-17</span>
-        
-      </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
     </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/zookeeper-de-zab-xie-yi-yu-nacos-de-raft-xie-yi/">
-        <h2 class="post-title">zookeeper的zab协议与Nacos的Raft协议</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-08-23</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/jdk18hashmap-yi-ji-concurrenthashmap-yuan-ma-fen-xi/">
-        <h2 class="post-title">JDK1.8HashMap以及ConcurrentHashMap源码分析</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-08-23</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/java-ji-he-arraylist-yu-linkedlist-yuan-ma-fen-xi/">
-        <h2 class="post-title">java集合ArrayList与LinkedList源码分析</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-08-16</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/springbootapplication-zhu-jie-fen-xi/">
-        <h2 class="post-title">SpringBootApplication注解分析</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-07-20</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/spring-jie-jue-dan-shi-li-bean-de-xun-huan-yi-lai/">
-        <h2 class="post-title">spring解决单实例bean的循环依赖</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-07-16</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/spring-yuan-ma-zhi-bean-de-chuang-jian-guo-cheng-yu-spring-aop-yuan-li/">
-        <h2 class="post-title">spring源码之Bean的创建过程与Spring AOP原理</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-07-13</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/spring-chang-yong-zhu-jie-zuo-yong-yu-chang-yong-jie-kou-yu-hou-zhi-chu-li-qi/">
-        <h2 class="post-title">spring常用注解作用与常用接口与后置处理器</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-07-12</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/spring-rong-qi-qi-dong-yuan-ma-fen-xi/">
-        <h2 class="post-title">spring容器启动源码分析</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-07-06</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/ying-xiao-xiang-mu-ce-lue-mo-ban-fang-fa-gong-han-yun-yong/">
-        <h2 class="post-title">营销项目策略+模板方法+工厂运用</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-07-03</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/fen-bu-shi-ren-wu-diao-du-zhi-xxl-job/">
-        <h2 class="post-title">分布式任务调度之XXL-JOB</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-07-02</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/kafka-yuan-li-jie-xi-yu-kafka-java-api-can-shu-shuo-ming/">
-        <h2 class="post-title">kafka原理解析与kafka java api参数说明</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-06-29</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/kafka-jian-jie-yu-ji-qun-da-jian/">
-        <h2 class="post-title">kafka简介与集群搭建</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-06-28</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/jdk-dong-tai-dai-li-yu-cglib-dong-tai-dai-li-springboot2x-shi-yong-spring-aop-shi-li/">
-        <h2 class="post-title">JDK动态代理与Cglib动态代理(SpringBoot2.x使用spring aop示例)</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-06-26</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/shuang-qin-wei-pai-ji-zhi/">
-        <h2 class="post-title">双亲委派机制</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-04-15</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/yi-xie-cha-xun-jvm-de-ming-ling/">
-        <h2 class="post-title">一些查询JVM的命令</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-04-14</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/gong-zuo-zhong-yu-dao-wen-ti-ji-lu/">
-        <h2 class="post-title">工作中遇到问题记录</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-03-18</span>
-        
-      </div>
-    </div>
-    
-  </section>
-
-<section class="post-item">
-    <div class="content">
-      <a href="https://yzx2018.github.io/mypage/post/springbootdubbozk-ji-qun-da-jian/">
-        <h2 class="post-title">springboot+dubbo+zk集群搭建</h2>
-      </a>
-      <div class="post-abstract">
-        
-      </div>
-      <div class="post-info">
-        <span><i class="icon icon-calendar-outline"></i> 2019-02-09</span>
-        
-      </div>
-    </div>
-    
-  </section>
+  </div>
+</div>
 
 
-<div class="pagination-container">
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/ru-kou-wang-guan-gao-xing-neng-shi-jian/">
+                  <h2 class="post-title">入口网关高性能实践</h2>
+                </a>
+                <div class="post-date">
+                  2023-03-29
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/ru-kou-wang-guan-ji-lu-ji-you-hua/">
+                  <h2 class="post-title">入口网关记录及优化</h2>
+                </a>
+                <div class="post-date">
+                  2023-03-29
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/fen-bu-shi-suo-redis-he-zookeeper/">
+                  <h2 class="post-title">分布式锁(redis和zookeeper)</h2>
+                </a>
+                <div class="post-date">
+                  2021-01-02
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/fen-bu-shi-shi-wu-lcn-yu-seata-yuan-li/">
+                  <h2 class="post-title">分布式事务LCN与Seata原理</h2>
+                </a>
+                <div class="post-date">
+                  2020-12-17
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/zookeeper-de-zab-xie-yi-yu-nacos-de-raft-xie-yi/">
+                  <h2 class="post-title">zookeeper的zab协议与Nacos的Raft协议</h2>
+                </a>
+                <div class="post-date">
+                  2019-08-23
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/jdk18hashmap-yi-ji-concurrenthashmap-yuan-ma-fen-xi/">
+                  <h2 class="post-title">JDK1.8HashMap以及ConcurrentHashMap源码分析</h2>
+                </a>
+                <div class="post-date">
+                  2019-08-23
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/java-ji-he-arraylist-yu-linkedlist-yuan-ma-fen-xi/">
+                  <h2 class="post-title">java集合ArrayList与LinkedList源码分析</h2>
+                </a>
+                <div class="post-date">
+                  2019-08-16
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/springbootapplication-zhu-jie-fen-xi/">
+                  <h2 class="post-title">SpringBootApplication注解分析</h2>
+                </a>
+                <div class="post-date">
+                  2019-07-20
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/spring-jie-jue-dan-shi-li-bean-de-xun-huan-yi-lai/">
+                  <h2 class="post-title">spring解决单实例bean的循环依赖</h2>
+                </a>
+                <div class="post-date">
+                  2019-07-16
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/spring-yuan-ma-zhi-bean-de-chuang-jian-guo-cheng-yu-spring-aop-yuan-li/">
+                  <h2 class="post-title">spring源码之Bean的创建过程与Spring AOP原理</h2>
+                </a>
+                <div class="post-date">
+                  2019-07-13
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/spring-chang-yong-zhu-jie-zuo-yong-yu-chang-yong-jie-kou-yu-hou-zhi-chu-li-qi/">
+                  <h2 class="post-title">spring常用注解作用与常用接口与后置处理器</h2>
+                </a>
+                <div class="post-date">
+                  2019-07-12
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/spring-rong-qi-qi-dong-yuan-ma-fen-xi/">
+                  <h2 class="post-title">spring容器启动源码分析</h2>
+                </a>
+                <div class="post-date">
+                  2019-07-06
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/ying-xiao-xiang-mu-ce-lue-mo-ban-fang-fa-gong-han-yun-yong/">
+                  <h2 class="post-title">营销项目策略+模板方法+工厂运用</h2>
+                </a>
+                <div class="post-date">
+                  2019-07-03
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/fen-bu-shi-ren-wu-diao-du-zhi-xxl-job/">
+                  <h2 class="post-title">分布式任务调度之XXL-JOB</h2>
+                </a>
+                <div class="post-date">
+                  2019-07-02
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/kafka-yuan-li-jie-xi-yu-kafka-java-api-can-shu-shuo-ming/">
+                  <h2 class="post-title">kafka原理解析与kafka java api参数说明</h2>
+                </a>
+                <div class="post-date">
+                  2019-06-29
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/kafka-jian-jie-yu-ji-qun-da-jian/">
+                  <h2 class="post-title">kafka简介与集群搭建</h2>
+                </a>
+                <div class="post-date">
+                  2019-06-28
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/jdk-dong-tai-dai-li-yu-cglib-dong-tai-dai-li-springboot2x-shi-yong-spring-aop-shi-li/">
+                  <h2 class="post-title">JDK动态代理与Cglib动态代理(SpringBoot2.x使用spring aop示例)</h2>
+                </a>
+                <div class="post-date">
+                  2019-06-26
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/shuang-qin-wei-pai-ji-zhi/">
+                  <h2 class="post-title">双亲委派机制</h2>
+                </a>
+                <div class="post-date">
+                  2019-04-15
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/yi-xie-cha-xun-jvm-de-ming-ling/">
+                  <h2 class="post-title">一些查询JVM的命令</h2>
+                </a>
+                <div class="post-date">
+                  2019-04-14
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+            <article class="post-item">
+              <div class="left">
+                <a href="https://yzx2018.github.io/mypage/post/gong-zuo-zhong-yu-dao-wen-ti-ji-lu/">
+                  <h2 class="post-title">工作中遇到问题记录</h2>
+                </a>
+                <div class="post-date">
+                  2019-03-18
+                </div>
+                <div class="post-abstract">
+                  
+                </div>
+              </div>
+              
+            </article>
+          
+
+          <div class="pagination-container">
   
   
     <a href="https://yzx2018.github.io/mypage/page/2" class="next">下一页 <i class="icon-arrow-ios-forward-outline"></i></a>
   
 </div>
 
-
+        </div>
       </div>
-
-      <div class="site-footer">
-  <div class="slogan">温故而知新</div>
-  <div class="social-container">
-    
-      
-    
-      
-    
-      
-    
-      
-    
-      
-    
-  </div>
-  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
-</div>
-
-
     </div>
-    <script type="application/javascript">
 
-hljs.initHighlightingOnLoad()
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
 
 var app = new Vue({
   el: '#app',
@@ -442,6 +415,8 @@ var app = new Vue({
 })
 
 </script>
+
+
 
 
 

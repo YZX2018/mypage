@@ -1,92 +1,102 @@
-
 <!DOCTYPE html>
 <html>
   <head>
-    
-<meta charset="utf-8" >
+    <meta charset="utf-8" >
 
 <title>spring解决单实例bean的循环依赖 | 首页</title>
-<meta name="description" content="温故而知新">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
 
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1681804114105">
 <link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
 
 
 
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
 <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
-<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
 
 
 
+    <meta name="description" content="singletonObjects一级缓存，存放完整的对象
+earlySingletonObjects 二级缓存，存放不完成的对象(只实例化对象，并未赋值)
+singletonFactories 三级缓存，存放不完成的对象(只实例化对象，并未..." />
+    <meta name="keywords" content="" />
   </head>
   <body>
     <div id="app" class="main">
-      <div class="site-header-container">
-  <div class="site-header">
-    <div class="left">
-      <a href="https://yzx2018.github.io/mypage/">
-        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
-      </a>
-      <a href="https://yzx2018.github.io/mypage/">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://yzx2018.github.io/mypage/">
+        <img src="https://yzx2018.github.io/mypage//images/avatar.png?v=1681804114105" class="site-logo">
         <h1 class="site-title">首页</h1>
       </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
     </div>
-    <div class="right">
-      <transition name="fade">
-        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
-      </transition>
-    </div>
-  </div>
-</div>
-
-<transition name="fade">
-  <div class="menu-container" style="display: none;" v-show="menuVisible">
-    <div class="menu-list">
+    <div>
       
         
-          <a href="/" class="menu purple-link">
+          <a href="/" class="site-nav">
             首页
           </a>
         
       
         
-          <a href="/archives" class="menu purple-link">
+          <a href="/archives" class="site-nav">
             归档
           </a>
         
       
         
-          <a href="/tags" class="menu purple-link">
+          <a href="/tags" class="site-nav">
             标签
           </a>
         
       
         
-          <a href="/post/about" class="menu purple-link">
+          <a href="/post/about" class="site-nav">
             关于
           </a>
         
       
     </div>
   </div>
-</transition>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      温故而知新
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
 
 
-      <div class="content-container">
-        <div class="post-detail">
-          
-          <h2 class="post-title">spring解决单实例bean的循环依赖</h2>
-          <div class="post-info post-detail-info">
-            <span><i class="icon-calendar-outline"></i> 2019-07-16</span>
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">spring解决单实例bean的循环依赖</h2>
+            <div class="post-date">2019-07-16</div>
             
-          </div>
-          <div class="post-content" v-pre>
-            <p>singletonObjects一级缓存，存放完整的对象</p>
+            <div class="post-content" v-pre>
+              <p>singletonObjects一级缓存，存放完整的对象</p>
 <p>earlySingletonObjects 二级缓存，存放不完成的对象(只实例化对象，并未赋值)<br>
 singletonFactories 三级缓存，存放不完成的对象(只实例化对象，并未赋值)</p>
 <p>二级缓存存放的就是三级缓存的对象。如果在singletonFactories找到对应的对象，会把它存放到earlySingletonObjects中，并删除singletonFactories中的对象。<br>
@@ -114,45 +124,31 @@ org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#pop
 只能不使用spring的依赖注入，通过set方法手动赋值</p>
 <p>如果把A对象构造方法引用B，B对象构造方法引用A，也是无法解决循环依赖问题，因为两个对象都无法实例化，更不用说赋值了</p>
 
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://yzx2018.github.io/mypage/post/spring-yuan-ma-zhi-bean-de-chuang-jian-guo-cheng-yu-spring-aop-yuan-li/">
+                  <h3 class="post-title">
+                    spring源码之Bean的创建过程与Spring AOP原理
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
           </div>
+
         </div>
-
-        
-          <div class="next-post">
-            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/spring-yuan-ma-zhi-bean-de-chuang-jian-guo-cheng-yu-spring-aop-yuan-li/">
-              <h3 class="post-title">
-                下一篇：spring源码之Bean的创建过程与Spring AOP原理
-              </h3>
-            </a>
-          </div>
-          
       </div>
-
-      
-
-      <div class="site-footer">
-  <div class="slogan">温故而知新</div>
-  <div class="social-container">
-    
-      
-    
-      
-    
-      
-    
-      
-    
-      
-    
-  </div>
-  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
-</div>
-
-
     </div>
-    <script type="application/javascript">
 
-hljs.initHighlightingOnLoad()
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
 
 var app = new Vue({
   el: '#app',
@@ -162,6 +158,8 @@ var app = new Vue({
 })
 
 </script>
+
+
 
 
 

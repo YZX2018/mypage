@@ -1,92 +1,103 @@
-
 <!DOCTYPE html>
 <html>
   <head>
-    
-<meta charset="utf-8" >
+    <meta charset="utf-8" >
 
 <title>入口网关记录及优化 | 首页</title>
-<meta name="description" content="温故而知新">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
 
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1680078907277">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1681804114105">
 <link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
 
 
 
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
 <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
-<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
 
 
 
+    <meta name="description" content="
+线程池优化方案
+1.背景：网关开始设计调用下游http服务时,使用asyncHttpClient是创建一个线程池去异步调用下游http服务，创建线程池增加网关资源消耗，增加线程开销，和cup上下文的切换
+优化：asyncHttpClien..." />
+    <meta name="keywords" content="" />
   </head>
   <body>
     <div id="app" class="main">
-      <div class="site-header-container">
-  <div class="site-header">
-    <div class="left">
-      <a href="https://yzx2018.github.io/mypage/">
-        <img class="avatar" src="https://yzx2018.github.io/mypage//images/avatar.png?v=1680078907277" alt="" width="32px" height="32px">
-      </a>
-      <a href="https://yzx2018.github.io/mypage/">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://yzx2018.github.io/mypage/">
+        <img src="https://yzx2018.github.io/mypage//images/avatar.png?v=1681804114105" class="site-logo">
         <h1 class="site-title">首页</h1>
       </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
     </div>
-    <div class="right">
-      <transition name="fade">
-        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
-      </transition>
-    </div>
-  </div>
-</div>
-
-<transition name="fade">
-  <div class="menu-container" style="display: none;" v-show="menuVisible">
-    <div class="menu-list">
+    <div>
       
         
-          <a href="/" class="menu purple-link">
+          <a href="/" class="site-nav">
             首页
           </a>
         
       
         
-          <a href="/archives" class="menu purple-link">
+          <a href="/archives" class="site-nav">
             归档
           </a>
         
       
         
-          <a href="/tags" class="menu purple-link">
+          <a href="/tags" class="site-nav">
             标签
           </a>
         
       
         
-          <a href="/post/about" class="menu purple-link">
+          <a href="/post/about" class="site-nav">
             关于
           </a>
         
       
     </div>
   </div>
-</transition>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      温故而知新
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
 
 
-      <div class="content-container">
-        <div class="post-detail">
-          
-          <h2 class="post-title">入口网关记录及优化</h2>
-          <div class="post-info post-detail-info">
-            <span><i class="icon-calendar-outline"></i> 2023-03-29</span>
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">入口网关记录及优化</h2>
+            <div class="post-date">2023-03-29</div>
             
-          </div>
-          <div class="post-content" v-pre>
-            <blockquote>
+            <div class="post-content" v-pre>
+              <blockquote>
 <h3 id="线程池优化方案">线程池优化方案</h3>
 <h5 id="1背景网关开始设计调用下游http服务时使用asynchttpclient是创建一个线程池去异步调用下游http服务创建线程池增加网关资源消耗增加线程开销和cup上下文的切换">1.背景：网关开始设计调用下游http服务时,使用asyncHttpClient是创建一个<code>线程池</code>去异步调用下游http服务，创建线程池增加网关资源消耗，增加线程开销，和cup上下文的切换</h5>
 <h6 id="优化asynchttpclient复用网关服务的work线程池eventloopgroupwork减少线程开锁销对服务器的压力和减少cpu上下文切换qps提升2000">优化：asyncHttpClient复用网关服务的work线程池(eventLoopGroupWork)，减少线程开锁销对服务器的压力和减少cpu上下文切换，QPS提升2000</h6>
@@ -118,7 +129,7 @@
 <blockquote>
 <h4 id="在conditionrouteprefilter条件路由使用collectionssort对arraylist存储condition信息排序时抛出javautilconcurrentmodificationexception异常">在ConditionRoutePreFilter(条件路由)使用Collections.sort对ArrayList(存储Condition信息)排序时抛出java.util.ConcurrentModificationException异常</h4>
 <h4 id="原因route信息是共享内存的collectionssort是线程不安全的多个线程同时请求这个route进行排序会使得modcount冲突抛出javautilconcurrentmodificationexception异常">原因：route信息是共享内存的，Collections.sort是线程不安全的，多个线程同时请求这个route进行排序会使得modCount冲突，抛出java.util.ConcurrentModificationException异常</h4>
-<figure data-type="image" tabindex="1"><img src="https://gitee.com/yezhaoxin/static/raw/master/images/rivers01.jpg" alt="image.png" loading="lazy"></figure>
+<figure data-type="image" tabindex="1"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/rivers01.jpg" alt="image.png" loading="lazy"></figure>
 </blockquote>
 <blockquote>
 <h3 id="网关使用到的设计模式">网关使用到的设计模式</h3>
@@ -140,45 +151,31 @@
 12.超时设置(TimeoutPreFilter)</p>
 </blockquote>
 
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://yzx2018.github.io/mypage/post/fen-bu-shi-suo-redis-he-zookeeper/">
+                  <h3 class="post-title">
+                    分布式锁(redis和zookeeper)
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
           </div>
+
         </div>
-
-        
-          <div class="next-post">
-            <a class="purple-link" href="https://yzx2018.github.io/mypage/post/fen-bu-shi-suo-redis-he-zookeeper/">
-              <h3 class="post-title">
-                下一篇：分布式锁(redis和zookeeper)
-              </h3>
-            </a>
-          </div>
-          
       </div>
-
-      
-
-      <div class="site-footer">
-  <div class="slogan">温故而知新</div>
-  <div class="social-container">
-    
-      
-    
-      
-    
-      
-    
-      
-    
-      
-    
-  </div>
-  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
-</div>
-
-
     </div>
-    <script type="application/javascript">
 
-hljs.initHighlightingOnLoad()
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
 
 var app = new Vue({
   el: '#app',
@@ -188,6 +185,8 @@ var app = new Vue({
 })
 
 </script>
+
+
 
 
 

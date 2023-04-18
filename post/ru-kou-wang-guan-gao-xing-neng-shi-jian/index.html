@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>入口网关高性能实践 | 首页</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://yzx2018.github.io/mypage//favicon.ico?v=1681804114105">
+<link rel="stylesheet" href="https://yzx2018.github.io/mypage//styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="Rivers流量入口网关高性能实践
+一．背景介绍
+1.1API网关是什么？
+API网关是随着微服务（Microservice）概念兴起的一种架构模式。原本一个庞大的单体应用（All in one）业务系统被拆分成许多微服务（Microser..." />
+    <meta name="keywords" content="" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://yzx2018.github.io/mypage/">
+        <img src="https://yzx2018.github.io/mypage//images/avatar.png?v=1681804114105" class="site-logo">
+        <h1 class="site-title">首页</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="site-nav">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      温故而知新
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://yzx2018.github.io/mypage//atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">入口网关高性能实践</h2>
+            <div class="post-date">2023-03-29</div>
+            
+            <div class="post-content" v-pre>
+              <p>Rivers流量入口网关高性能实践</p>
+<h1 id="一背景介绍">一．背景介绍</h1>
+<h4 id="11api网关是什么">1.1API网关是什么？</h4>
+<p>API网关是随着微服务（Microservice）概念兴起的一种架构模式。原本一个庞大的单体应用（All in one）业务系统被拆分成许多微服务（Microservice）系统进行独立的维护和部署，服务拆分带来的变化是API的规模成倍增长，API的管理难度也在日益增加，使用API网关发布和管理API逐渐成为一种趋势。一般来说，API网关是运行于外部请求与内部服务之间的一个流量入口，实现对外部请求的协议转换、负载均衡、鉴权、流控、参数校验、监控等通用功能。<br>
+架构形态：<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/%E5%85%A5%E5%8F%A3%E7%BD%91%E5%85%B3%E9%AB%98%E6%80%A7%E8%83%BD%E5%AE%9E%E8%B7%B5-1.png" alt="image" loading="lazy"></p>
+<h4 id="12整体架构">1.2整体架构</h4>
+<figure data-type="image" tabindex="1"><img src="https://cdn.jsdelivr.net/gh/YZX2018/images/%E5%85%A5%E5%8F%A3%E7%BD%91%E5%85%B3%E9%AB%98%E6%80%A7%E8%83%BD%E5%AE%9E%E8%B7%B5-2.png" alt="image" loading="lazy"></figure>
+<p>Rivers API网关的数据面也就是Rivers网关服务端。一次完整的API请求，可能是从移动应用、Web应用，合作伙伴或内部系统发起，经过LB负载均衡后，到达网关服务端。网关服务端集成了一系列的基础功能组件和业务自定义组件，通过HTTP/Dubbo调用请求具体的业务后端服务，最后返回响应结果。</p>
+<p>Rivers API网关的控制面由Rivers Console管理平台和Rivers监控中心组成。管理平台主要完成API路由，功能插件配置下发的工作，监控中心完成API请求监控数据的收集和业务告警功能。</p>
+<p>Rivers API网关的配置中心主要完成控制面与数据面的信息交互，通过高可用的分布式键值(key-value)数据库ETCD来实现。</p>
+<h1 id="二rivers入口网关性能指标">二．Rivers入口网关性能指标</h1>
+<p>场景：与同类型开源软件做性能极限对比，Rivers网关和Spring Cloud Gateway 和 Nginx<br>
+结论：在同等压测环境下，Rivers入口网关性能仅次于Nginx，远高于Spring Cloud Gateway，具体指标如下：<br>
+无网关(TPS:135174.89) &gt; Nginx(TPS:119295.74) &gt;Rivers (TPS:103664.59)&gt; Spring Cloud Gateway(TPS:40919.64)<br>
+压测机配置：8C16G<br>
+压测报告：<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/%E5%85%A5%E5%8F%A3%E7%BD%91%E5%85%B3%E9%AB%98%E6%80%A7%E8%83%BD%E5%AE%9E%E8%B7%B5-3.png" alt="image" loading="lazy"></p>
+<h1 id="三rivers入口网关中的高性能实践">三．Rivers入口网关中的高性能实践</h1>
+<h4 id="31-基于netty的epoll事件处理机制和completablefuture打造一个全链路请求和响应异步的网关">3.1 基于Netty的epoll事件处理机制和CompletableFuture打造一个全链路请求和响应异步的网关</h4>
+<p>Rivers入口网关是基于Netty框架打造的HTTP服务器，应用在Linux环境使用了基于epoll事件处理机制，在应对高并发的场景下可以更高效的处理连接的请求。<br>
+网关支持的下游协议有HTTP和Dubbo，在发起网络请求等待响应时都是基于异步处理的。网关使用AsyncHttpClient框架处理HTTP请求，使用Dubbo泛化调用处理Dubbo请求，当前两个框架都支持对请求的异步处理封装为CompletableFuture，网关基于异步回调的机制继续执行调用链处理请求。<br>
+在基于Netty的全链路异步架构下，其设计就是来榨干CPU，可以大幅提升单机请求响应的处理能力。<br>
+每一次http请求最终都会由Netty的一个Handler来处理,其最终以异步模式请求后台服务，并返回一个CompletableFuture,当有结果返回时才会将结果返回给调用端。<br>
+见下面一段例子:</p>
+<ul>
+<li>HttpRouteFilter</li>
+</ul>
+<pre><code class="language-java">@Override
+public void run(RiversExchange exchange, FilterChain filterChain) throws Exception {
+     
+         // 构建HttpRequest对象
+        Request request = exchange.getRequestMutable().build();
+        CompletableFuture&lt;Response&gt; future = AsyncHttpHelper.getInstance().executeRequest(exchange, request);
+        // 执行异步处理
+        future.whenComplete((response, throwable) -&gt; {
+            try {
+                exchange.releaseRequest();
+                if (Objects.nonNull(throwable)) {
+                        exchange.occurError(new RiversConnectException(throwable, exchange.getServiceName(), url));
+                    }
+                } else {
+                    try {
+                        exchange.completedAndResponse(RiversResponse.buildRiversResponse(response));
+                    } catch (Exception e) {
+                        exchange.occurError(e);
+                    }
+                }
+            } catch (Throwable t) {
+                exchange.occurError(t);
+            }
+            //在下游服务响应结果后继续执行调用链
+            filterChain.doFilter();
+        });
+}
+</code></pre>
+<h4 id="32-业务逻辑中使用的数据全部存储在内存中">3.2 业务逻辑中使用的数据全部存储在内存中</h4>
+<p>入口网关会把服务路由信息，服务实例信息等核心数据存储在内存中，以服务路由信息存储为例说明：<br>
+3.2.1 数据初始化<br>
+入口网关服务启动时会主动从ETCD配置中心获取服和路由配置信息并存储在内存中<br>
+  3.2.2 监听数据变化<br>
+  监听ETCD上的服务路由目录，当路由目录节点下有任何配置变更时会收到变更通知，然后同步去更新缓存中服务路由配置<br>
+基于以上两步可以做到内存中数据的异步更新，在业务逻辑处理时直接从缓存中获取数据，以此得到更好的性能。</p>
+<h4 id="33-线程池优化async-http-client线程池复用netty-worker线程池">3.3 线程池优化：Async Http Client线程池复用Netty Worker线程池</h4>
+<p>前面提到网关是基于Netty打造的全链路异步架构，这种架构下不会阻塞请求，可以看作是计算密集型应用，线程数的理想方案是和CPU核数一样，可以充分利用CPU多核的性能。<br>
+  Async Http Client线程池复用Netty Worker线程池后，可以减少线程数量，避免过多的线程上下文切换开销。针对线程池复用和线程池隔离的场景进行压测发现，复用线程池后网关的QPS能提升600+，压测过程观察线程每秒上下文切换次数也减少了。<br>
+  Async Http Client线程池复用Netty Worker线程池<br>
+见下面一段例子：</p>
+<ul>
+<li>RiversContainer</li>
+</ul>
+<pre><code class="language-java">@Override
+public void init()  {
+   //初始化Netty Boss线程池和Work线程池
+   if (useEPoll()) {
+    this.eventLoopGroupBoss = new EpollEventLoopGroup(riversConfig.getEventLoopGroupBossNum(), new DefaultThreadFactory(&quot;NettyBossEPOLL&quot;));
+    this.eventLoopGroupWork = new EpollEventLoopGroup(riversConfig.getEventLoopGroupWorkNum(), new DefaultThreadFactory(&quot;NettyWorkEPOLL&quot;));
+} else {
+    this.eventLoopGroupBoss = new NioEventLoopGroup(riversConfig.getEventLoopGroupBossNum(), new DefaultThreadFactory(&quot;NettyBoss&quot;));
+    this.eventLoopGroupWork = new NioEventLoopGroup(riversConfig.getEventLoopGroupWorkNum(), new DefaultThreadFactory(&quot;NettyWork&quot;));
+}
+    //初始化Netty HTTP服务
+    NettyHttpServer  nettyHttpServer = new NettyHttpServer(riversConfig, eventLoopGroupBoss, eventLoopGroupWork);
+ 
+    //初始化Async Http Client
+   DefaultAsyncHttpClientConfig.Builder clientBuilder = new DefaultAsyncHttpClientConfig.Builder()
+        .setFollowRedirect(false)
+        .setEventLoopGroup(eventLoopGroupWork) // 复用Netty Work线程池
+        .setConnectTimeout(riversConfig.getHttpConnectTimeout())
+        .setRequestTimeout(riversConfig.getHttpRequestTimeout())
+        .setReadTimeout(riversConfig.getHttpReadTimeout())
+        .setMaxRequestRetry(riversConfig.getHttpMaxRequestRetry())
+        .setAllocator(PooledByteBufAllocator.DEFAULT)
+        .setCompressionEnforced(true)
+        .setMaxConnections(riversConfig.getHttpMaxConnections())
+        .setMaxConnectionsPerHost(riversConfig.getHttpMaxConnectionsPerHost())
+        .setPooledConnectionIdleTimeout(riversConfig.getHttpPooledConnectionIdleTimeout());
+ 
+     AsyncHttpClient  asyncHttpClient = new DefaultAsyncHttpClient(clientBuilder.build());
+}
+</code></pre>
+<h4 id="34-线程池优化dubbo泛化调用线程池优化">3.4 线程池优化：Dubbo泛化调用线程池优化</h4>
+<p>网关支持Dubbo协议的下游服务，基于Dubbo泛化调用特性实现对Dubbo服务的异步调用，优化线程池可以在处理高并发的请求时减少线程上下文开销，提升服务吞吐。<br>
+调整消费者线程池模式为direct ，业务线程复用IO线程</p>
+<ul>
+<li>all 所有消息都派发到线程池，包括请求，响应，连接事件，断开事件，心跳等。</li>
+<li>direct 所有消息都不派发到线程池，全部在 IO 线程上直接执行。</li>
+<li>message 只有请求响应消息派发到线程池，其它连接断开事件，心跳等消息，直接在 IO 线程上执行。</li>
+<li>execution 只有请求消息派发到线程池，不含响应，响应和其它连接断开事件，心跳等消息，直接在 IO 线程上执行。</li>
+<li>connection 在 IO 线程上，将连接断开事件放入队列，有序逐个执行，其它消息派发到线程池。<br>
+Dubbo线程模型介绍可参考官方文档：https://dubbo.apache.org/zh/docs/v2.7/user/examples/thread-model/</li>
+</ul>
+<p>Dubbo泛化服务GenericService初始化配置，见下面一段例子：</p>
+<ul>
+<li>ReferenceHelper</li>
+</ul>
+<pre><code class="language-java">private GenericService newGenericService(List&lt;RegistryConfig&gt; registries, String interfaceClass, int timeout, String version) {
+    log.info(&quot;Dubbo生成泛化调用服务 {}, {}&quot;, interfaceClass, version);
+    if (timeout &lt;= 0) {
+        timeout = DEFAULT_TIMEOUT;
+    }
+    RiversConfig riversConfig = RiversConfigLoader.getRiversConfig();
+    ReferenceConfig&lt;GenericService&gt; referenceConfig = new ReferenceConfig&lt;GenericService&gt;();
+    referenceConfig.setApplication(applicationConfig);
+    referenceConfig.setRegistries(registries);
+    referenceConfig.setTimeout(timeout);
+    referenceConfig.setGeneric(&quot;true&quot;);
+    referenceConfig.setInterface(interfaceClass);
+    referenceConfig.setAsync(true);
+    referenceConfig.setCheck(false);
+    referenceConfig.setParameters(new HashMap&lt;&gt;());
+//调整消费者线程池类型为direct，业务线程复用IO线程
+referenceConfig.getParameters().put(&quot;dispatcher&quot;, &quot;direct&quot;);  
+    referenceConfig.setVersion(version);
+    return referenceConfig.get();
+}
+</code></pre>
+<h4 id="35-dubbo泛化服务genericservice预初始化并进行缓存">3.5 Dubbo泛化服务GenericService预初始化并进行缓存</h4>
+<p>在上一节贴出了Dubbo泛化服务GenericService的初始化代码，先初始化ReferenceConfig对象，然后通过 referenceConfig.get()获取GenericService对象，其中get()方法调用会阻塞当前线程，背后的逻辑是根据服务的配置，连接到服务的注册中心并注册监听，此过程是同步的。<br>
+预初始化并缓存GenericService可以有效的解决泛化服务第一次调用初始化慢和多次调用重复初始化问题。</p>
+<h4 id="36-日志输出优化">3.6 日志输出优化</h4>
+<p>网关在高并发的场景下，当大量输出日志到本地磁盘时，比如使用Log4j2的异步日志输出模式，在日志队列调度和磁盘调度过程中都会占用大量的CPU资源。<br>
+为此网关做了如下优化来尽量的避免日志输出对网关性能的影响：<br>
+1.入口网关链路日志通过kafka上报到Track平台<br>
+2.入口网关业务日志通过kafka上报到Track平台<br>
+3.入口网关的业务日志主要集中在插件内，插件设计了日志开关，默认为关闭状态<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/%E5%85%A5%E5%8F%A3%E7%BD%91%E5%85%B3%E9%AB%98%E6%80%A7%E8%83%BD%E5%AE%9E%E8%B7%B5-4.png" alt="image" loading="lazy"></p>
+<h4 id="37-路由匹配效率优化">3.7 路由匹配效率优化</h4>
+<p>路由匹配一般情况下是拿到所有的路由集合，路由会按照一定的顺序或者一定的优先匹配规则（比如nginx的最长路径优先原则），用当前接收到的请求逐个进行匹配，直到找到命中的路由结束。<br>
+按照这个匹配规则，在某些情况下，比如一套网关配置了大量的服务路由，根据路由的顺序规则排在末尾的路由被命中耗费的时间会比较长。通过测试发现路由整体数量超过一定的数量，网关路由匹配的平均耗时明显增加。<br>
+为了解决这个问题，网关将路由匹配做如下优化：<br>
+路由分类：路由被分为默认路由和非默认路由（默认路由一般是按照前缀或者域名+前缀匹配的根路由，一个服务一般只需要一个默认路由，可以有多个非默认路由）<br>
+路由匹配过程分为两步：<br>
+第一步：匹配服务<br>
+   	提取所有的默认路由，按优先级排序，根据请求匹配到默认路由后拿到服务名<br>
+第二步：匹配路由<br>
+  	根据第一步获取的服务名，提取服务下的所有路由，按优先级排序，根据请求匹配到路由</p>
+<p>通过上述路由匹配方案优化后，在线下UAT环境（服务总数352，路由总数974，默认路由总数512），优化后的版本路由匹配方法的平均耗时为0.5ms以内，优化前的版本平均耗时在10ms。<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/%E5%85%A5%E5%8F%A3%E7%BD%91%E5%85%B3%E9%AB%98%E6%80%A7%E8%83%BD%E5%AE%9E%E8%B7%B5-5.png" alt="image" loading="lazy"></p>
+<h4 id="38-http-keep-alive支持">3.8 HTTP keep-alive支持</h4>
+<p>HTTP协议是一个运行在TCP协议之上的无状态的应用层协议。它的特点是：客户端的每一次请求都要和服务端创建TCP连接，服务器响应后，断开TCP连接。下次客户端再有请求，则重新建立连接。<br>
+在早期的http1.0中，默认就是上述介绍的这种“请求-应答”模式。这种方式频繁的创建连接和销毁连接无疑是有一定性能损耗的。所以引入了keep-alive机制。http1.0默认是关闭的，通过http请求头设置“connection: keep-alive”进行开启；http1.1中默认开启，通过http请求头设置“connection: close”关闭。<br>
+keep-alive机制：若开启后，在一次http请求中，服务器进行响应后，不再直接断开TCP连接，而是将TCP连接维持一段时间。在这段时间内，如果同一客户端再次向服务端发起http请求，便可以复用此TCP连接，向服务端发起请求，并重置timeout时间计数器，在接下来一段时间内还可以继续复用。这样无疑省略了反复创建和销毁TCP连接的损耗。<br>
+  网关中是如何处理的，见下面一段例子：</p>
+<ul>
+<li>ResponseHelper</li>
+</ul>
+<pre><code class="language-java">    private void writeResponse(RiversExchange exchange) {
+    if (exchange.isCompleted()) {
+           //获取HTTP请求的响应结果
+            FullHttpResponse httpResponse = ResponseHelper.getHttpResponse(exchange, exchange.getRiversResponse());
+           //判断当前请求是否开启keep-alive
+            if (!HttpUtil.isKeepAlive(exchange.getRquest())) {
+                //请求回写完成后断开连接
+                exchange.getNettyCtx().writeAndFlush(httpResponse).addListener(ChannelFutureListener.CLOSE);
+            } else {
+                //告诉客户端服务端支持keep-alive,回写响应结果后保持连接
+                httpResponse.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+                exchange.getNettyCtx().writeAndFlush(httpResponse);
+            }
+}
+</code></pre>
+<h4 id="39-使用布隆过滤器处理灰度用户是否命中问题">3.9 使用布隆过滤器处理灰度用户是否命中问题</h4>
+<p>网关功能场景介绍：<br>
+服务在灰度发布时，按灰度用户去做验证是常见的场景。网关为了更好的支此场景，设计了“基于用户群体”作为路由条件的策略，所谓的“用户群体”指的是由业务方挑选出的一个或一批用户的集合。<br>
+结合当前业务的使用场景，网关和kylin系统进行对接，让业务方可以很方便的基于kylin组织、角色、用户维度进行用户挑选，创建用户群体。<br>
+用户群体创建完成后，在标签路由基于用户群体的配置时可以选择相关的用户群体。<br>
+配置完成后，当网关收到用户的请求时，如果用户包含在配置的用户群体中，网关会请求到指定标签的下游实例去。<br>
+如图：<br>
+<img src="https://cdn.jsdelivr.net/gh/YZX2018/images/%E5%85%A5%E5%8F%A3%E7%BD%91%E5%85%B3%E9%AB%98%E6%80%A7%E8%83%BD%E5%AE%9E%E8%B7%B5-6.png" alt="image" loading="lazy"></p>
+<p>介绍完此功能场景后，在功能实现中会涉及到如何快速确定发送请求的用户是否是灰度用户？<br>
+网关使用布隆过滤器来存储用户群体，通过用户群体布隆过滤器可以快速确定一个特定用户是否存存在。<br>
+网关中是如何处理的，见下面一段例子：</p>
+<ul>
+<li>UserIdTagRouterOperate</li>
+</ul>
+<pre><code class="language-java">@Override
+public boolean test(TagRouter.TagRouterConfig config, RiversExchange exchange) {
+    //获取从当前请求提取的用户ID
+    Long userId = exchange.getAttribute(AttributeKey.AUTH_ID_KEY);
+    return config.getParam().getUserGroupKeys()
+            .parallelStream().
+            anyMatch(userGroupKey -&gt; {
+                //从用户群体配置获取对应的用户群体布隆过滤器
+                BloomFilter bloomFilter = DefaultDynamicConfig.getInstance().getUserGroupBloomFilter(userGroupKey);
+               //判断是否包含
+                return bloomFilter.mightContain(userId.toString());
+            });
+}
+</code></pre>
+<p>以上就是Rivers入口网关在实践中的关键性能优化点，当前网关还在持续优化中，极致的性能优化不仅可以降低网关延迟，为业务赋能的同时又不会给业务带来负担，而且可以充分利用系统资源提升单机服务的处理能力节约服务器成本，降本增效。</p>
+
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://yzx2018.github.io/mypage/post/ru-kou-wang-guan-ji-lu-ji-you-hua/">
+                  <h3 class="post-title">
+                    入口网关记录及优化
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+
+
+  </body>
+</html>
